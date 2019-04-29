@@ -1,0 +1,23 @@
+%%the beginning of an test data for Micro/Ex
+
+begin 
+ declare A,I as integer;
+ declare B,C,D,size as real;
+ declare PI;
+ declare LLL(100) AS REAL;
+
+ PI:=3.1416;
+ B:=PI*B*B+C/D+0.345E-6;
+ 
+ FOR (I:=1 TO 100)
+   C:=LLL(I)+B*D-C;
+ ENDFOR
+
+ IF (C>=10000) THEN
+    print("Good!");
+ ENDIF
+
+end 
+  
+    
+ 
