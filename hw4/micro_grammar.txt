@@ -1,0 +1,22 @@
+<program> -> begin <statement list> end
+<statement list> -> <statement> <statement tail>
+<statement tail> -> <statement> <statement tail>
+<statement tail> -> 
+<statement> -> ID := <expression> ;
+<statement> -> read ( <id list> ) ;
+<statement> -> write ( <expr list> ) ;
+<id list> -> ID <id tail>
+<id tail> -> , ID <id tail>
+<id tail> -> 
+<expr list> -> <expression> <expr tail>
+<expr tail> -> , <expression> <expr tail>
+<expr tail> ->
+<expression> -> <primary> <primary tail>
+<primary tail> -> <add op> <primary> <primary tail>
+<primary tail> -> 
+<primary> -> ( <expression> )
+<primary> -> ID
+<primary> -> INTLIT
+<add op> -> +
+<add op> -> -
+<system goal> -> <program> $
