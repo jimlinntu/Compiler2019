@@ -64,6 +64,8 @@ EXP         ({FLOAT}{e}([+-]?{INTLIT}))
 STR         \"[^"\n]*\"
 LPAREN      \(
 RPAREN      \)
+LSQPAREN    \[
+RSQPAREN    \]
 SEMICOL     ";"
 COMMA       ","
 ASSIGNOP    ":="
@@ -94,15 +96,17 @@ FLOATTOK    {f}{l}{o}{a}{t}
 SCANEOF     {s}{c}{a}{n}{e}{o}{f}
 
 %%
- /* Ignore characters */
+ /* Ignore characters: do not need to return token */
 {IGNORE}     {
     if(strcmp(yytext, "\n") == 0){
-        return NEWLINE;
+        //return NEWLINE; 
     }
-    return IGNORE;
+    //return IGNORE;
 }
 {PROGRAM} {return PROGRAM;}
-{COMMENT}   { } /* Ignore comment*/
+{COMMENT}   { 
+    //printf("COMMENT\n"); 
+} /* Ignore comment*/
  /* Keywords: should be matched with high priority */ 
 {BEGIN}     { return BEGIN_;}
 {END}       { return END;}
@@ -110,6 +114,8 @@ SCANEOF     {s}{c}{a}{n}{e}{o}{f}
 {WRITE}     { return WRITE;}
 {LPAREN}    { return LPAREN;}
 {RPAREN}    { return RPAREN;}
+{LSQPAREN}  { return LSQPAREN;}
+{RSQPAREN}  { return RSQPAREN;}
 {SEMICOL}   { return SEMICOL;}
 {COMMA}     { return COMMA;}
 {ASSIGNOP}  { return ASSIGNOP;}
@@ -139,12 +145,18 @@ SCANEOF     {s}{c}{a}{n}{e}{o}{f}
 {FLOATTOK}  { return FLOATTOK;}
 
  /* Literal */
-{INTLIT}    { return INTLITERAL;}   
+{INTLIT}    { 
+    yylval.ival = atoi(yytext);
+    return INTLITERAL;
+}   
 {FLOAT}     { return FLTLITERAL;}
 {EXP}       { return EXPFLTLITERAL;}
 {STR}       { return STRLITERAL;}
  /* Variable */
-{ID}        { return ID;}
+{ID}        { 
+    yylval.name = strdup(yytext); // allocate string memory
+    return ID; 
+}
  /* Scaneof */
 <<EOF>>     { return 0;} /*End of input*/
  /* Illegal characters will fall in here */
