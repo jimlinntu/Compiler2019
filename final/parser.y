@@ -119,13 +119,13 @@ Expression: Expression PLUSOP Expression {
                 $$.kind = id_expr;
                 $$.name = $1; // Note: assign heap memory pointer, TODO: remember to free memory on upper layer
                 declare_type type = search_symbol_table($1, &symbol_table);
-                if(type == undefined) yyerror("This variable does not exist\n");
+                if(type == undefined) yyerror("This variable does not exist");
             }
             /* TODO: Support array indexing ex. LLL[I], LLL[I*j+5] */
           | ID LSQPAREN Expression RSQPAREN {
                 Var *var = get_symbol_table_record($1, &symbol_table);
                 if(var->isarray == 0){
-                    yyerror("This variable cannot be indexed\n");
+                    yyerror("This variable cannot be indexed");
                 }
                 declare_type type = search_symbol_table($1, &symbol_table);
                 // Generate temporary variable
@@ -139,7 +139,7 @@ Expression: Expression PLUSOP Expression {
                     snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%d", $3.ival);
                     generate_load_word($1, literalstr, tmpSymbol_table.var_list[top].name);
                 }else if($3.kind == flt_literal_expr){
-                    yyerror("Array indexing with double value is not supported\n");
+                    yyerror("Array indexing with double value is not supported");
                 }else assert(0);
             }
           ;
@@ -174,10 +174,15 @@ Var: ID {
     var_buf.var_list[top].decltype = undefined;
     var_buf.size++;
    }
-   | ID LSQPAREN INTLITERAL RSQPAREN /* ex. LLL[10]*/{
+   | ID LSQPAREN Expression RSQPAREN /* ex. LLL[10]*/{
     int top = var_buf.size;
     var_buf.var_list[top].name = $1;
-    var_buf.var_list[top].array_size = $3;
+    if($3.kind == int_literal_expr){
+        var_buf.var_list[top].array_size = $3.ival;
+    }else{
+        yyerror("Array should be declared with integer type");
+        assert(0);
+    }
     var_buf.var_list[top].isarray = 1;
     var_buf.var_list[top].decltype = undefined;
     var_buf.size++;

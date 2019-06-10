@@ -3,6 +3,7 @@ Begin
     declare a, b, c as integer;
     declare d, e, f as float;
     declare LLL[10] as float;
+    declare jim[10+7+9] as integer;
     %% 
     3 + -7 + 8 * 9 - 2;
     %%
