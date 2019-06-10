@@ -4,11 +4,13 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include "y.tab.h" 
 #define MAX_VAR 1000
 #define MAX_TMP_VAR_LEN 1000
 #define PRINT_FROM_YACC (printf("[*] FROM YACC\n"))
 typedef short bool;
 typedef enum {undefined, integer, float_} declare_type; // ex. declare ... as [declare_type]
+typedef enum { plus, minus, mult, div_ } operator_kind;
 typedef struct Var_{
     char *name;
     int array_size; 
@@ -78,6 +80,7 @@ bool insert_tmp_symbol(declare_type type){
     assert(ret == 1);
     return 1;
 }
+void print_declaration();
 // [*] Flush variable buffer
 void flush_var_buf(declare_type type){
     // [*] Put these variables into symbol table
@@ -91,6 +94,7 @@ void flush_var_buf(declare_type type){
             free(var_buf.var_list[i].name);
         }
     }
+    print_declaration();
     var_buf.size = 0;
 }
 void print_type(declare_type type){
@@ -99,17 +103,22 @@ void print_type(declare_type type){
 }
 void print_declaration(){
     Var *var;
-    for(int i = 0; i < symbol_table.size; i++){
-        var = &symbol_table.var_list[i];
-        printf("Declare ");
+    for(int i = 0; i < var_buf.size; i++){
+        var = &var_buf.var_list[i];
+        printf("\tDeclare ");
         printf("%s, ", var->name);
         print_type(var->decltype);
         if(var->isarray) printf("_array, %d", var->array_size);
         printf("\n");
     }
 }
+char *op2string(operator_kind op_kind){
+    static char op2string_array[10][100] = {"ADD", "SUB", "MUL", "DIV"};
+    return op2string_array[op_kind];
+}
 
 void generate_arithmetic(declare_type type, char *op, char *src1, char *src2, char *target){
+    printf("\t");
     if(type == integer) printf("I_");
     else if(type == float_) printf("F_");
     else assert(0);
@@ -123,8 +132,99 @@ void generate_arithmetic(declare_type type, char *op, char *src1, char *src2, ch
         printf("%s, %s\n", src1, target);
     }
 }
+// TODO: 
+void generate_conversion(char *convert_command, char *src, char *target){
+
+}
+// [*] Detect whether one of expressions is not literal value
+bool has_var(ExpressionRecord expr1, ExpressionRecord expr2){
+    return (expr1.kind == id_expr) || (expr1.kind == temp_expr) 
+        || (expr2.kind == id_expr) || (expr2.kind == temp_expr);
+}
+bool has_double(ExpressionRecord expr1, ExpressionRecord expr2){
+    declare_type ltype, rtype;
+    if(expr1.kind == id_expr){
+        ltype = search_symbol_table(expr1.name, &symbol_table);
+    }else if(expr1.kind == temp_expr){
+        ltype = search_symbol_table(expr1.name, &tmpSymbol_table);
+    }else assert(0);
+    
+    if(expr2.kind == id_expr){
+        rtype = search_symbol_table(expr2.name, &symbol_table);
+    }else if(expr2.kind == temp_expr){
+        rtype = search_symbol_table(expr2.name, &tmpSymbol_table);
+    }else assert(0);
+    return (ltype == float_) || (rtype == float_);
+}
+
+// [*] To avoid duplication of expression [+|-|*|/] expression
+ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, operator_kind op){
+    bool ret = has_var($1, $3); // check whether there are variables. If not, then we will compute literal value
+    ExpressionRecord $$;
+    // [*] if there is variable
+    if(ret){
+        ret = has_double($1, $3);
+        // if one of expressions has double type, then we will assign
+        declare_type return_type = (ret)? (float_):(integer); 
+        bool ret = insert_tmp_symbol(return_type); // create float temporary variable
+        assert(ret == 1);
+        // Assign lhs expression to temporary variable
+        $$.kind = temp_expr;
+        $$.name = tmpSymbol_table.var_list[tmpSymbol_table.size-1].name;
+        // TODO: type conversion instruction
+        // Generate instruction
+        //generate_arithmetic(return_type, op2string($2), $1.name, $3.name, $$.name);
+        generate_arithmetic(return_type, op2string(op), $1.name, $3.name, $$.name);
+    }
+    // [*] if there is no variables
+    else{
+        bool has_double_ = ($1.kind == flt_literal_expr) || ($3.kind == flt_literal_expr);
+
+        if(has_double_){
+            $$.kind = flt_literal_expr;
+            $$.dval = 0.;
+        }else{
+            $$.kind = int_literal_expr;
+            $$.ival = 0;
+        }
+
+        if($1.kind == flt_literal_expr){
+            $$.dval = $1.dval;
+        }else{
+            if(has_double_){
+                $$.dval = $1.ival; // use dval field
+            }else{
+                $$.ival = $1.ival; // use ival field
+            }
+        }
+        
+        if($3.kind == flt_literal_expr){
+            if(op == plus) $$.dval += $3.dval;
+            else if(op == minus) $$.dval -= $3.dval;
+            else if(op == mult) $$.dval *= $3.dval;
+            else if(op == div_) $$.dval /= $3.dval;
+            else assert(0);
+        }else{
+            if(has_double_){
+                if(op == plus) $$.dval += $3.ival;
+                else if(op == minus) $$.dval -= $3.ival;
+                else if(op == mult) $$.dval *= $3.ival;
+                else if(op == div_) $$.dval /= $3.ival;
+                else assert(0);
+            }else{
+                if(op == plus) $$.ival += $3.ival;
+                else if(op == minus) $$.ival -= $3.ival;
+                else if(op == mult) $$.ival *= $3.ival;
+                else if(op == div_) $$.ival /= $3.ival;
+                else assert(0);
+            }
+        }
+    }
+    return $$;
+}
 %}
 /* https://stackoverflow.com/questions/1430390/include-struct-in-the-union-def-with-bison-yacc */
+/* This part will be put into `y.tab.h` */
 %code requires{
     #define MAX_VAR_LEN 1000
     typedef enum {id_expr, flt_literal_expr, int_literal_expr, temp_expr} expr_kind;
@@ -143,6 +243,7 @@ void generate_arithmetic(declare_type type, char *op, char *src1, char *src2, ch
     int type;  // [*] declare_type
     char *name; 
     ExpressionRecord record;
+    int op; // [*] operator_kind
 }
 
 %token PROGRAM FAIL BEGIN_ END READ WRITE ID INTLITERAL FLTLITERAL EXPFLTLITERAL STRLITERAL LPAREN RPAREN LSQPAREN RSQPAREN SEMICOL COMMA ASSIGNOP PLUSOP MINUSOP MULTOP DIVOP NEQ GT LT GEQ LEQ EQ IF THEN ELSE ENDIF FOR TO ENDFOR WHILE ENDWHILE DECLARE AS INTEGER REAL FLOATTOK SCANEOF IGNORE NEWLINE
@@ -178,7 +279,7 @@ Stmt_list: Stmt SEMICOL
 Stmt: DeclareStmt | ExpressionStmt;
 
 DeclareStmt: DECLARE Variable_list AS Type{
-    // Flush Variable_list into symbol table
+    // Flush Variable_list into symbol table and print
     flush_var_buf($4);
 };
 
@@ -192,10 +293,9 @@ ExpressionStmt: ID ASSIGNOP Expression {
                 }
               ;
 
-Expression: Expression PLUSOP Expression
-          | Expression MINUSOP Expression
-          | Expression MULTOP Expression
-          | Expression DIVOP Expression
+Expression: Expression PLUSOP Expression {
+            $$ = expression_action($1, $3, plus);
+          }
           | MINUSOP Expression %prec UMINUS {
                 if($2.kind == flt_literal_expr){
                     $$.kind = $2.kind;
@@ -228,7 +328,11 @@ Expression: Expression PLUSOP Expression
           | ID {
                 $$.kind = id_expr;
                 $$.name = $1; // Note: assign heap memory pointer, TODO: remember to free memory on upper layer
+                // TODO: check if ID exists
+                declare_type type = search_symbol_table($1, &symbol_table);
+                if(type == undefined) yyerror("This variable does not exist\n");
             }
+            /* TODO: Support array indexing ex. LLL[I] */
           ;
 Number: INTLITERAL {
         $$.kind = int_literal_expr;
