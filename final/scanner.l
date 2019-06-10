@@ -149,7 +149,10 @@ SCANEOF     {s}{c}{a}{n}{e}{o}{f}
     yylval.ival = atoi(yytext);
     return INTLITERAL;
 }   
-{FLOAT}     { return FLTLITERAL;}
+{FLOAT}     { 
+    yylval.dval = atof(yytext);
+    return FLTLITERAL;
+}
 {EXP}       { return EXPFLTLITERAL;}
 {STR}       { return STRLITERAL;}
  /* Variable */
