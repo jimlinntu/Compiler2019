@@ -1,0 +1,26 @@
+Program expressiontest
+Begin
+    declare a, b, c as integer;
+    declare d, e, f as float;
+    declare LLL[10] as float;
+    %% 
+    3 + -7 + 8 * 9 - 2;
+    %%
+    a + b;
+    a + d;
+    d + e;
+    %%
+    a + 3;
+    a + 4.0;
+    d + 3;
+    d + 3.0;
+    %%
+    a + 3 * 5;
+    (a + b) * 6;
+
+    %% Array indexing
+    LLL[9+7+a];
+    LLL[1.0]; %% Error
+    a[7]; %% Error
+   
+End

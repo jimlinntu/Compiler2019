@@ -1,6 +1,6 @@
 .PHONY: all clean
 all: y.tab.c y.tab.h lex.yy.c
-	gcc -Wall -o parser y.tab.c lex.yy.c -ly -ll
+	gcc -Wall -o parser y.tab.c lex.yy.c util.c -ly -ll
 
 y.tab.%: parser.y
 	yacc -vd parser.y
