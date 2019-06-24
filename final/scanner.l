@@ -7,6 +7,7 @@
 #include <string.h>
 #include <assert.h>
 #define LINELEN 1000
+extern int lineno;
 /*
 typedef enum token_types{
     FAIL, BEGIN_, END, READ, WRITE, ID, INTLITERAL, FLTLITERAL, EXPFLTLITERAL, STRLITERAL, LPAREN, RPAREN, SEMICOL, COMMA, ASSIGNOP, PLUSOP, MINUSOP, MULTOP, DIVOP, NEQ, GT, LT, GEQ, LEQ, EQ, IF, THEN, ELSE, ENDIF, FOR, TO, ENDFOR, WHILE, ENDWHILE, DECLARE, AS, INTEGER, REAL, SCANEOF, IGNORE, NEWLINE
@@ -99,12 +100,20 @@ SCANEOF     {s}{c}{a}{n}{e}{o}{f}
  /* Ignore characters: do not need to return token */
 {IGNORE}     {
     if(strcmp(yytext, "\n") == 0){
+        // Increment lineno
+        lineno++;
         //return NEWLINE; 
     }
     //return IGNORE;
 }
 {PROGRAM} {return PROGRAM;}
 {COMMENT}   { 
+    // Increment lineno
+    int length = strlen(yytext);
+    // if the last character of `yytext` is the newline char, increment the `lineno` var
+    if(length > 0 && yytext[length-1] == '\n'){
+        lineno++;
+    }   
     //printf("COMMENT\n"); 
 } /* Ignore comment*/
  /* Keywords: should be matched with high priority */ 

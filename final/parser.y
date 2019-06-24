@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <string.h>
 #include "y.tab.h" 
+int lineno=1;
 %}
 /* https://stackoverflow.com/questions/1430390/include-struct-in-the-union-def-with-bison-yacc */
 /* This part will be put into `y.tab.h` */
@@ -191,7 +192,7 @@ Var: ID {
 
 %%
 int yyerror(char *s){
-    fprintf(stderr, "%s\n", s);
+    fprintf(stderr, "The error occurs at line %d: %s\n", lineno, s);
 }
 
 int main(){
