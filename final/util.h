@@ -14,14 +14,14 @@
 typedef short bool;
 typedef enum {undefined, integer, float_} declare_type; // ex. declare ... as [declare_type]
 typedef enum { plus, minus, mult, div_ } operator_kind;
-
 typedef enum {id_expr, flt_literal_expr, int_literal_expr, temp_expr} expr_kind;
+
 typedef struct ExpressionRecord_ {
     expr_kind kind;
     union{
-        char *name;
-        int ival;
-        double dval;
+        char *name; // `id_expr` or `temp_expr`
+        int ival; // `flt_literal_expr`
+        double dval; // `int_literal_expr`
     };
 } ExpressionRecord;
 typedef struct Var_{

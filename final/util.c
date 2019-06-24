@@ -126,6 +126,7 @@ bool has_var(ExpressionRecord expr1, ExpressionRecord expr2){
         || (expr2.kind == id_expr) || (expr2.kind == temp_expr);
 }
 
+// [*] Check whether these two expressions have at least 1 being `float` type
 bool has_double(ExpressionRecord expr1, declare_type *ltype, ExpressionRecord expr2, declare_type *rtype){
     if(expr1.kind == id_expr){
         *ltype = search_symbol_table(expr1.name, &symbol_table);
@@ -206,26 +207,27 @@ ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, ope
     }
     // [*] if there is no variables
     else{
-        declare_type ltype, rtype;
+        declare_type ltype, rtype; // left declared type and right declare type
         bool has_double_ = has_double($1, &ltype, $3, &rtype); // check if at least one of literal values is double literal value
 
         if(has_double_){
             $$.kind = flt_literal_expr;
             $$.dval = 0.0;
         }else{
+            // If there is no double expression, we will use the integer literal expression as return kind
             $$.kind = int_literal_expr;
             $$.ival = 0;
         }
 
         if($1.kind == flt_literal_expr){
             $$.dval = $1.dval;
-        }else{
+        }else if($1.kind == int_literal_expr){
             if(has_double_){
                 $$.dval = $1.ival; // use dval field
             }else{
                 $$.ival = $1.ival; // use ival field
             }
-        }
+        }else assert(0);
         
         if($3.kind == flt_literal_expr){
             if(op == plus) $$.dval += $3.dval;
@@ -236,7 +238,7 @@ ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, ope
                 $$.dval /= $3.dval;
             }
             else assert(0);
-        }else{
+        }else if($1.kind == int_literal_expr){
             if(has_double_){
                 if(op == plus) $$.dval += $3.ival;
                 else if(op == minus) $$.dval -= $3.ival;
@@ -256,7 +258,7 @@ ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, ope
                 }
                 else assert(0);
             }
-        }
+        }else assert(0);
     }
     return $$;
 }

@@ -15,10 +15,10 @@ int lineno=1;
 %union {
     int ival; // [*] Integer value
     double dval; // [*] double value
-    int type;  // [*] declare_type
+    declare_type type;  // [*] declare_type
     char *name; 
     ExpressionRecord record;
-    int op; // [*] operator_kind
+    operator_kind op; // [*] operator_kind
 }
 
 %token PROGRAM FAIL BEGIN_ END READ WRITE ID INTLITERAL FLTLITERAL EXPFLTLITERAL STRLITERAL LPAREN RPAREN LSQPAREN RSQPAREN SEMICOL COMMA ASSIGNOP PLUSOP MINUSOP MULTOP DIVOP NEQ GT LT GEQ LEQ EQ IF THEN ELSE ENDIF FOR TO ENDFOR WHILE ENDWHILE DECLARE AS INTEGER REAL FLOATTOK SCANEOF IGNORE NEWLINE
@@ -51,6 +51,7 @@ Stmt_list: Stmt SEMICOL
          ;
 
  /* TODO: Add more statement type */
+ /* Statement -> Declare | Expression | For loop | If | Function */
 Stmt: DeclareStmt | ExpressionStmt;
 
 DeclareStmt: DECLARE Variable_list AS Type{
