@@ -59,11 +59,106 @@ DeclareStmt: DECLARE Variable_list AS Type{
     flush_var_buf($4);
 };
 
- /* ID = expression */
-ExpressionStmt: ID ASSIGNOP Expression {
-                
+ 
+ExpressionStmt: ID ASSIGNOP Expression /* ID = expression */ {
+                // TODO: IntToFloat
+                Var *var = get_symbol_table_record($1, &symbol_table);
+                if(var == NULL){
+                    yyerror("This variable does not exist");
+                    return;
+                }
+                // Get the type of that ID
+                declare_type type;
+                type = search_symbol_table($1, &symbol_table);
+                // Convert an integer value into a string if needed
+                if($3.kind == id_expr || $3.kind == temp_expr){
+                    generate_assignment(type, $3.name, $1, NULL);
+                }else if($3.kind == flt_literal_expr){
+                    char literalstr[MAX_LITERAL_LEN];
+                    snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%f", $3.dval);
+                    generate_assignment(type, literalstr, $1, NULL);
+                }else if($3.kind == int_literal_expr){
+                    char literalstr[MAX_LITERAL_LEN];
+                    snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%d", $3.ival);
+                    generate_assignment(type, literalstr, $1, NULL);
+                }else assert(0);
+
+                // Free ID's memory
+                free($1);
               }
-              | Expression /* Do nothing*/{
+              | ID LSQPAREN Expression RSQPAREN ASSIGNOP Expression /* ID[10] = expression */ {
+                // Check the $3 type is correct
+                declare_type type, array_type;
+                if($3.kind == id_expr) type = search_symbol_table($3.name, &symbol_table);
+                else if($3.kind == temp_expr) type = search_symbol_table($3.name, &tmpSymbol_table);
+                else if($3.kind == int_literal_expr) type = integer;
+                else if($3.kind == flt_literal_expr) type = float_;
+                else assert(0);
+                if(type != integer){
+                    // TODO: try to fix early return
+                    yyerror("The expression in the square parentheses should be integer type");
+                    return;
+                }
+
+                // Get array type
+                Var *var = get_symbol_table_record($1, &symbol_table);
+                if(var == NULL){
+                    yyerror("This array does not exist.");
+                    return;
+                }else if(var->isarray == 0){
+                    yyerror("This variable is not an array type");
+                    return;
+                }else array_type = var->decltype; // Get the array type
+                
+                
+                // Set a temporary register(`T&?`) that saves `$ID + $3` address
+                bool ret = insert_tmp_symbol(integer); // create a new temporary register
+                assert(ret == 1);
+                int top = tmpSymbol_table.size-1;
+
+                if($3.kind == id_expr || $3.kind == temp_expr){
+                    // T&? = ID's address + $3 value
+                    generate_arithmetic(integer, op2string(plus), $1, $3.name, tmpSymbol_table.var_list[top].name);
+                }else if($3.kind == int_literal_expr){
+                    char literalstr[MAX_LITERAL_LEN];
+                    snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%d", $3.ival);
+                    // T&? = ID's address + $3's literal value
+                    generate_arithmetic(integer, op2string(plus), $1, literalstr, tmpSymbol_table.var_list[top].name);
+                }
+                else assert(0);
+                // Store $6 into it
+                // TODO: Add Int2Float and Float2Int
+                declare_type to_assign_type;
+                
+                
+                
+                if($6.kind == id_expr){
+                    to_assign_type = search_symbol_table($6.name, &symbol_table);
+                    // if two types do not match(), we will transform rhs into lhs type 
+                    if(array_type != to_assign_type){
+                        
+                    }
+                    
+                    generate_assignment(array_type, $6.name, tmpSymbol_table.var_list[top].name, "0");
+                }else if($6.kind == temp_expr){
+                    
+                    
+                }else if($6.kind == int_literal_expr){
+                    char literalstr[MAX_LITERAL_LEN];
+                    snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%d", $6.ival);
+                    generate_assignment(array_type, literalstr, tmpSymbol_table.var_list[top].name, "0");
+                }else if($6.kind == flt_literal_expr){
+                    char literalstr[MAX_LITERAL_LEN];
+                    snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%f", $6.dval);
+                    generate_assignment(array_type, literalstr, tmpSymbol_table.var_list[top].name, "0");
+                }else assert(0);
+                
+
+                // Free $1 memory
+                free($1);
+              }
+              | Expression {
+                    
                     /*
                     printf("Expression: \n");
                     printf("kind = %d\n", $1.kind);
@@ -95,7 +190,7 @@ Expression: Expression PLUSOP Expression {
                 }else if($2.kind == int_literal_expr){
                     $$.kind = $2.kind;
                     $$.ival = (-$2.ival);
-                }else{
+                }else if($2.kind == id_expr || $2.kind == temp_expr){
                     declare_type type;
                     if($2.kind == id_expr){
                         type = search_symbol_table($2.name, &symbol_table);
@@ -109,7 +204,7 @@ Expression: Expression PLUSOP Expression {
                     $$.kind = temp_expr;
                     $$.name = tmpSymbol_table.var_list[top].name; // assign pointer
                     generate_arithmetic(type, "UMINUS", $2.name, NULL, $$.name);
-                }
+                }else assert(0);
             }
           | LPAREN Expression RPAREN {
                 $$ = $2;
@@ -118,10 +213,15 @@ Expression: Expression PLUSOP Expression {
                 $$ = $1;
             }
           | ID {
+                Var *var = get_symbol_table_record($1, &symbol_table);
+                if(var == NULL){
+                    yyerror("This variable does not exist");
+                    return;
+                }       
                 $$.kind = id_expr;
-                $$.name = $1; // Note: assign heap memory pointer, TODO: remember to free memory on upper layer
-                declare_type type = search_symbol_table($1, &symbol_table);
-                if(type == undefined) yyerror("This variable does not exist");
+                $$.name = var->name; // Let $$.name points to the symbol table record's name(to avoid memory leakage)
+                // Free $1
+                free($1);
             }
             /* TODO: Support array indexing ex. LLL[I], LLL[I*j+5] */
           | ID LSQPAREN Expression RSQPAREN {
@@ -130,11 +230,12 @@ Expression: Expression PLUSOP Expression {
                     yyerror("This variable cannot be indexed");
                 }
                 declare_type type = search_symbol_table($1, &symbol_table);
-                // Generate temporary variable
+                // Generate a temporary variable with `type`
                 insert_tmp_symbol(type);
                 int top = tmpSymbol_table.size-1;
                 // array indexing
                 if($3.kind == id_expr || $3.kind == temp_expr){
+                    // Generate the loading word instruction
                     generate_load_word($1, $3.name, tmpSymbol_table.var_list[top].name);
                 }else if($3.kind == int_literal_expr){
                     char literalstr[MAX_LITERAL_LEN];
@@ -143,6 +244,13 @@ Expression: Expression PLUSOP Expression {
                 }else if($3.kind == flt_literal_expr){
                     yyerror("Array indexing with double value is not supported");
                 }else assert(0);
+
+                // Add $$
+                $$.kind = temp_expr;
+                $$.name = tmpSymbol_table.var_list[top].name;
+                // Free the memory
+                free($1);
+                
             }
           ;
 Number: INTLITERAL {
@@ -181,8 +289,11 @@ Var: ID {
     var_buf.var_list[top].name = $1;
     if($3.kind == int_literal_expr){
         var_buf.var_list[top].array_size = $3.ival;
-    }else{
+    }else if($3.kind == flt_literal_expr){
         yyerror("Array should be declared with integer type");
+        assert(0);
+    }else{
+        yyerror("Array should be declared with literal intger value");
         assert(0);
     }
     var_buf.var_list[top].isarray = 1;

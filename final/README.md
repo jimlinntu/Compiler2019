@@ -32,9 +32,12 @@ make clean
     * INC I
     * DEC I
     * IntToFloat i1, t (type conversion)
+    * FloatToInt f1, t (type conversion)
 * Assignment
     * I_Store i1,t
+    * I_Store i1,offset(t) (Store i1 into MEM[t + offset])
     * F_Store f1,t
+    * I_Store f1,offset(t) (Store f1 into MEM[t + offset])
 * Compare instruction
     * I_CMP i1,i2
     * F_CMP f1,f2
@@ -45,4 +48,7 @@ make clean
 
 
 
+## TODO
+- [ ] Check `ID` memory leakage problem
+- [ ] Make sure even when `yyerror` occurs, the compiler can still compile the following line
 

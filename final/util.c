@@ -40,6 +40,7 @@ Var *get_symbol_table_record(char *name, SymbolTable *table){
     }
     return NULL;
 }
+// [*] Retrieve the declared type of the variable `name`
 declare_type search_symbol_table(char *name, SymbolTable *table){
     for(int i = 0; i < table->size; i++){
         if(strcmp(name, table->var_list[i].name) == 0) return table->var_list[i].decltype;
@@ -49,7 +50,7 @@ declare_type search_symbol_table(char *name, SymbolTable *table){
 bool insert_tmp_symbol(declare_type type){
     int size = tmpSymbol_table.size;
     Var tmp_var = {.name=(char *)malloc(sizeof(char) * MAX_TMP_VAR_LEN), .array_size=1, .isarray=0, .decltype=type};
-    assert(tmp_var.name != NULL);
+    assert(tmp_var.name != NULL); // the memory should be allocated
     snprintf(tmp_var.name, MAX_TMP_VAR_LEN, "T&%d", size+1); // ex. T&1, T&2 ...
     int ret = symbol_lookup(&tmp_var, &tmpSymbol_table);
     assert(ret == 1);
@@ -85,9 +86,11 @@ void print_declaration(){
         if(var->isarray) printf("_array, %d", var->array_size);
         printf("\n");
     }
+    printf("\n");
 }
 void print_tmp_declaration(){
     Var *var;
+    printf("\n");
     for(int i = 0; i < tmpSymbol_table.size; i++){
         var = &tmpSymbol_table.var_list[i];
         printf("\tDeclare %s, ", var->name);
@@ -120,6 +123,18 @@ void generate_conversion(char *convert_command, char *src, char *target){
 void generate_load_word(char *src, char *offset, char *target){
     printf("\tLOAD %s, %s, %s\n", src, offset, target);
 }
+void generate_assignment(declare_type type, char *src, char *target, char *offset){
+    printf("\t");
+    if(type == float_) printf("F_");
+    else if(type == integer) printf("I_");
+    else assert(0);
+
+    if(offset != NULL){
+        printf("Store %s, %s(%s)\n", src, offset, target);
+    }else{
+        printf("Store %s, %s\n", src, target);
+    }
+}
 // [*] Detect whether one of expressions is not literal value
 bool has_var(ExpressionRecord expr1, ExpressionRecord expr2){
     return (expr1.kind == id_expr) || (expr1.kind == temp_expr) 
@@ -150,6 +165,7 @@ bool has_double(ExpressionRecord expr1, declare_type *ltype, ExpressionRecord ex
     return (*ltype == float_) || (*rtype == float_);
 }
 // [*] To avoid duplication of expression [+|-|*|/] expression
+// [*] Warning: there will be some implicit type conversion in this function
 ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, operator_kind op){
     bool ret = has_var($1, $3); // check whether there are variables. If not, then we will compute literal value
     ExpressionRecord $$;

@@ -63,8 +63,11 @@ void generate_arithmetic(declare_type type, char *op, char *src1, char *src2, ch
 // TODO: 
 void generate_conversion(char *convert_command, char *src, char *target);
 void generate_load_word(char *src, char *offset, char *target); // array indexing
+void generate_assignment(declare_type type, char *src, char *target, char *offset);
 // [*] Detect whether one of expressions is not literal value
 bool has_var(ExpressionRecord expr1, ExpressionRecord expr2);
 bool has_double(ExpressionRecord expr1, declare_type *ltype, ExpressionRecord expr2, declare_type *rtype);
 ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, operator_kind op);
+// [*] TODO: Make a type conversion action and return the pointer of the converted register
+Var *convert_and_create_tmp_var(declare_type src_type, char *src, declare_type target_type);
 #endif
