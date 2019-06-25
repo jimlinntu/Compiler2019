@@ -58,28 +58,41 @@ DeclareStmt: DECLARE Variable_list AS Type{
     // Flush Variable_list into symbol table and print declarations
     flush_var_buf($4);
 };
-
  
 ExpressionStmt: ID ASSIGNOP Expression /* ID = expression */ {
-                // TODO: IntToFloat
                 Var *var = get_symbol_table_record($1, &symbol_table);
                 if(var == NULL){
                     yyerror("This variable does not exist");
                     return;
                 }
                 // Get the type of that ID
-                declare_type type;
-                type = search_symbol_table($1, &symbol_table);
+                declare_type type = var->decltype, to_assign_type;
+                Var *tmpVar = NULL; // for type conversion
                 // Convert an integer value into a string if needed
+                // Type conversion if needed
                 if($3.kind == id_expr || $3.kind == temp_expr){
-                    generate_assignment(type, $3.name, $1, NULL);
+                    if($3.kind == id_expr) to_assign_type = search_symbol_table($3.name, &symbol_table);
+                    else if($3.kind == temp_expr) to_assign_type = search_symbol_table($3.name, &tmpSymbol_table);
+                    
+                    // if the types between $1 and $3 mismatch, convert $3 into the type of $1
+                    if(type != to_assign_type) tmpVar = convert_and_create_tmp_var(to_assign_type, $3.name, type);
+                    // if a type mismatch exists
+                    if(tmpVar == NULL) generate_assignment(type, $3.name, $1, NULL);
+                    else generate_assignment(type, tmpVar->name, $1, NULL);
+
                 }else if($3.kind == flt_literal_expr){
                     char literalstr[MAX_LITERAL_LEN];
-                    snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%f", $3.dval);
+                    // Implicit type conversion
+                    if(type == integer) snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%d", (int)$3.dval);
+                    else if(type == float_) snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%f", $3.dval);
+                    // Generate the instruction
                     generate_assignment(type, literalstr, $1, NULL);
                 }else if($3.kind == int_literal_expr){
                     char literalstr[MAX_LITERAL_LEN];
-                    snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%d", $3.ival);
+                    // Implicit type conversion
+                    if(type == integer) snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%d", $3.ival);
+                    else if(type == float_) snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%f", (double)$3.ival);
+                    // Generate the instruction
                     generate_assignment(type, literalstr, $1, NULL);
                 }else assert(0);
 
@@ -129,30 +142,43 @@ ExpressionStmt: ID ASSIGNOP Expression /* ID = expression */ {
                 // Store $6 into it
                 // TODO: Add Int2Float and Float2Int
                 declare_type to_assign_type;
-                
-                
+                Var *tmpVar = NULL;
                 
                 if($6.kind == id_expr){
+                    // Search symbol table
                     to_assign_type = search_symbol_table($6.name, &symbol_table);
-                    // if two types do not match(), we will transform rhs into lhs type 
+                    // if two types do not match(), we will transform rhs into lhs type(with a new register)
                     if(array_type != to_assign_type){
-                        
+                        tmpVar = convert_and_create_tmp_var(to_assign_type, $6.name, array_type);
                     }
-                    
-                    generate_assignment(array_type, $6.name, tmpSymbol_table.var_list[top].name, "0");
+                    // Generate the instruction: if tmpVar is not NULL(means there is a type mismatch)
+                    if(tmpVar == NULL) generate_assignment(array_type, $6.name, tmpSymbol_table.var_list[top].name, "0");
+                    else generate_assignment(array_type, tmpVar->name, tmpSymbol_table.var_list[top].name, "0");
                 }else if($6.kind == temp_expr){
-                    
-                    
+                    // Search temporary table
+                    to_assign_type = search_symbol_table($6.name, &tmpSymbol_table);
+                    if(array_type != to_assign_type){
+                        tmpVar = convert_and_create_tmp_var(to_assign_type, $6.name, array_type);
+                    }
+                    // Generate the instruction: if tmpVar is not NULL(means there is a type mismatch)
+                    if(tmpVar == NULL) generate_assignment(array_type, $6.name, tmpSymbol_table.var_list[top].name, "0");
+                    else generate_assignment(array_type, tmpVar->name, tmpSymbol_table.var_list[top].name, "0");
                 }else if($6.kind == int_literal_expr){
                     char literalstr[MAX_LITERAL_LEN];
-                    snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%d", $6.ival);
+                    // if array_type is integer 
+                    if(array_type == integer) snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%d", $6.ival);
+                    else if(array_type == float_) snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%f", (double)$6.ival);
+                    else assert(0);
+                    // Generate the instruction
                     generate_assignment(array_type, literalstr, tmpSymbol_table.var_list[top].name, "0");
                 }else if($6.kind == flt_literal_expr){
                     char literalstr[MAX_LITERAL_LEN];
-                    snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%f", $6.dval);
+                    if(array_type == integer) snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%d", (int)$6.dval);
+                    else if(array_type == float_) snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%f", $6.dval);
+                    else assert(0);
+                    // Generate the instruction
                     generate_assignment(array_type, literalstr, tmpSymbol_table.var_list[top].name, "0");
                 }else assert(0);
-                
 
                 // Free $1 memory
                 free($1);

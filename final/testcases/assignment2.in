@@ -1,0 +1,8 @@
+Program testAssignment
+Begin
+    declare a, b, c, p[100] as integer;
+    b := 3;
+    c := 5;
+    p[0.0] := 7 + 8;
+    a := b + c;
+End

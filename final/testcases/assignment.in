@@ -1,0 +1,18 @@
+Program testAssignment
+Begin
+    declare a, b, c, p[100] as integer;
+    declare d, e, f[10] as float;
+
+    %% Integer add
+    b := 3;
+    c := 5;
+    p[0] := 7 + 8;
+    a := b + c;
+
+    %% RHS Int2Float
+    e := c; %% RHS is ID
+    d := c + 3; %% RHS is temporary register
+    e := (7.0 + 9.0) * 8; %% RHS is float literal value
+    e := (7 + 9) * 8; %% RHS is integer literal value
+    
+End

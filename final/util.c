@@ -198,7 +198,7 @@ ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, ope
         // Assign lhs expression to temporary variable
         $$.kind = temp_expr;
         $$.name = tmpSymbol_table.var_list[tmpSymbol_table.size-1].name;
-        // Generate instructions
+        // At most one of $1 or $3 be literal value
         if($1.kind == int_literal_expr){
             char literalstr[MAX_LITERAL_LEN];
             snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%d", $1.ival);
@@ -216,7 +216,7 @@ ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, ope
             snprintf(literalstr, sizeof(char) * MAX_LITERAL_LEN, "%f", $3.dval);
             generate_arithmetic(return_type, op2string(op), $1.name, literalstr, $$.name);
         }
-        // Both are variables
+        // If both are variables
         else{
             generate_arithmetic(return_type, op2string(op), $1.name, $3.name, $$.name);
         }
@@ -234,7 +234,7 @@ ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, ope
             $$.kind = int_literal_expr;
             $$.ival = 0;
         }
-
+        // the left operand part
         if($1.kind == flt_literal_expr){
             $$.dval = $1.dval;
         }else if($1.kind == int_literal_expr){
@@ -244,7 +244,7 @@ ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, ope
                 $$.ival = $1.ival; // use ival field
             }
         }else assert(0);
-        
+        // the right operand part
         if($3.kind == flt_literal_expr){
             if(op == plus) $$.dval += $3.dval;
             else if(op == minus) $$.dval -= $3.dval;
@@ -254,7 +254,7 @@ ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, ope
                 $$.dval /= $3.dval;
             }
             else assert(0);
-        }else if($1.kind == int_literal_expr){
+        }else if($3.kind == int_literal_expr){
             if(has_double_){
                 if(op == plus) $$.dval += $3.ival;
                 else if(op == minus) $$.dval -= $3.ival;
@@ -277,4 +277,25 @@ ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, ope
         }else assert(0);
     }
     return $$;
+}
+// [*] This function will also generate a type conversion instruction if needed
+Var *convert_and_create_tmp_var(declare_type src_type, char *src, declare_type target_type){
+    // 
+    if(src_type != target_type){
+
+        bool ret = insert_tmp_symbol(target_type);
+        assert(ret == 1);
+        int top = tmpSymbol_table.size-1;
+        Var *tmpVar = &tmpSymbol_table.var_list[top];
+
+        if(target_type == float_){
+            // IntToFloat src, tmp
+            generate_conversion("IntToFloat", src, tmpVar->name);
+        }else if(target_type == integer){
+            // FloatToInt src, tmp
+            generate_conversion("FloatToInt", src, tmpVar->name);
+        }else assert(0);
+
+        return tmpVar;
+    }else return NULL; // In this case, no need to convert and do nothing
 }
