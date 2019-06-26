@@ -86,6 +86,7 @@ ELSE        {e}{l}{s}{e}
 ENDIF       {e}{n}{d}{i}{f}
 FOR         {f}{o}{r}
 TO          {t}{o}
+DOWNTO      {d}{o}{w}{n}{t}{o}
 ENDFOR      {e}{n}{d}{f}{o}{r}
 WHILE       {w}{h}{i}{l}{e}
 ENDWHILE    {e}{n}{d}{w}{h}{i}{l}{e}
@@ -144,6 +145,7 @@ SCANEOF     {s}{c}{a}{n}{e}{o}{f}
 {ENDIF}     { return ENDIF;}
 {FOR}       { return FOR;}
 {TO}        { return TO;}
+{DOWNTO}    { return DOWNTO;}
 {ENDFOR}    { return ENDFOR;}
 {WHILE}     { return WHILE;}
 {ENDWHILE}  { return ENDWHILE;}
@@ -172,6 +174,9 @@ SCANEOF     {s}{c}{a}{n}{e}{o}{f}
  /* Scaneof */
 <<EOF>>     { return 0;} /*End of input*/
  /* Illegal characters will fall in here */
-.           { error("lexcial error\n"); }
+.           { 
+    yyerror("lexcial error"); 
+    return 0; // Act like end of input
+}
 %%
 

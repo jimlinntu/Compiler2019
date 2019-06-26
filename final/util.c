@@ -2,7 +2,12 @@
 VarBuffer var_buf;
 SymbolTable symbol_table; // For variables
 SymbolTable tmpSymbol_table; // For temporary variables
+LabelTable labelTable; // label table
+ForHeadBuffer forHeadBuffer;
 
+void init_label_table(LabelTable *lt){
+    lt->size = 0;
+}
 void init_symbol_table(SymbolTable *table){
     table->var_list = (Var *)malloc(sizeof(Var) * MAX_VAR);
     assert(table->var_list != NULL);
@@ -134,6 +139,35 @@ void generate_assignment(declare_type type, char *src, char *target, char *offse
     }else{
         printf("Store %s, %s\n", src, target);
     }
+}
+void generate_label(char *labelName){
+    printf("%s:", labelName);
+}
+void generate_for_tail(char *loopVarName, char *loopEndName, char *jumpLabel, bool isTo){
+    // Increment or decrement
+    if(isTo) printf("\tINC %s\n", loopVarName);
+    else printf("\tDEC %s\n", loopVarName);
+
+    printf("\tI_CMP %s,%s\n", loopVarName, loopEndName);
+    // Jump less than or greate than
+    if(isTo) printf("\tJL %s\n", jumpLabel);
+    else printf("\tJL %s\n", jumpLabel);
+    printf("\n");
+
+}
+void generate_for_start_condition(char *loopVarName, char *loopEndName, char *jumpLabel){
+    // I_CMP I, 100
+    printf("\tI_CMP %s,%s\n", loopVarName, loopEndName);
+    // JGE lb&2
+    printf("\tJGE %s\n", jumpLabel);
+}
+void insert_label(){
+    snprintf(labelTable.labelName[labelTable.size], MAX_LITERAL_LEN, "lb&%d", labelTable.size+1);
+    labelTable.size++; // increment the label size
+}
+char *get_current_label(){
+    assert(labelTable.size > 0); // You should not get 0 size label table
+    return labelTable.labelName[labelTable.size-1];
 }
 // [*] Detect whether one of expressions is not literal value
 bool has_var(ExpressionRecord expr1, ExpressionRecord expr2){
@@ -299,3 +333,16 @@ Var *convert_and_create_tmp_var(declare_type src_type, char *src, declare_type t
         return tmpVar;
     }else return NULL; // In this case, no need to convert and do nothing
 }
+// Return a static string array
+char *expressionRecordToString(ExpressionRecord expr){
+    static char string[MAX_LITERAL_LEN];
+    if(expr.kind == id_expr || expr.kind == temp_expr){
+        return expr.name; 
+    }else if(expr.kind == int_literal_expr){
+        snprintf(string, MAX_LITERAL_LEN, "%d", expr.ival);
+        return string;
+    }else if(expr.kind == flt_literal_expr){
+        snprintf(string, MAX_LITERAL_LEN, "%f", expr.dval);
+        return string;
+    }else assert(0);
+};

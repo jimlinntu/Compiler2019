@@ -14,5 +14,21 @@ Begin
     d := c + 3; %% RHS is temporary register
     e := (7.0 + 9.0) * 8; %% RHS is float literal value
     e := (7 + 9) * 8; %% RHS is integer literal value
+    f[0] := c; %% RHS is ID
+    f[a] := c + 3; %% RHS is float temporary register
+    f[a*7+9-10] := (7.0 + 9.0) / 7.0 ; %% RHS is float literal value
+    f[a+1] := (7 + 9) / 7 ; %% RHS is integer literal value
+    
+    %% RHS Float2Int
+    a := d; %% RHS is ID
+    a := d + 8; %% RHS is temporary register
+    c := (5.0 - 9.0) * 8; %% RHS is float literal value
+    c := (5 - 9) * 8; %% RHS is integer literal value
+    p[0] := d; %% RHS is ID
+    p[a] := d / 7; %% RHS is temporary register
+    p[a+1] := (7 + 0.000); %% RHS is float literal value
+    p[a+7-b+10] := (10 - 7); %% RHS is integer literal value
+    
+    
     
 End

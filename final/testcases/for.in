@@ -1,0 +1,12 @@
+Program fortest
+Begin
+    declare a, b,I as integer;
+    %% End with a semicolon
+    FOR(I := 1+3+a TO 7+b)
+        a := 7+9;
+    ENDFOR;
+    %% End with no semicolon
+    FOR(I := 1 TO 100)
+        a := 7+9;
+    ENDFOR
+End

@@ -10,6 +10,8 @@
 #define MAX_VAR_LEN 1000
 #define MAX_TMP_VAR_LEN 1000
 #define MAX_LITERAL_LEN 1000
+#define MAX_LABEL 1000
+#define MAX_LABEL_LEN 1000
 #define PRINT_FROM_YACC (printf("[*] FROM YACC\n"))
 typedef short bool;
 typedef enum {undefined, integer, float_} declare_type; // ex. declare ... as [declare_type]
@@ -44,10 +46,27 @@ typedef struct SymbolTable_{
     int size;
 } SymbolTable;
 
+typedef struct LabelTable_{
+    char labelName[MAX_LABEL][MAX_LABEL_LEN];
+    int size;
+} LabelTable;
+
+typedef struct ForHeadBuffer_{
+    char *loopVarName;
+    char *loopEndName;
+    char *condition_success_label;
+    char *condition_fail_label;
+    bool isTo; // true: to, false: downto
+} ForHeadBuffer;
+
 extern SymbolTable symbol_table; // For variables
 extern SymbolTable tmpSymbol_table; // For temporary variables
+extern LabelTable labelTable; // For recording the label counter
+extern ForHeadBuffer forHeadBuffer;
 
 
+
+void init_label_table(LabelTable *lt);
 void init_symbol_table(SymbolTable *table);
 void destroy_symbol_table(SymbolTable *table);
 bool symbol_lookup(Var *var, SymbolTable *table);
@@ -64,10 +83,16 @@ void generate_arithmetic(declare_type type, char *op, char *src1, char *src2, ch
 void generate_conversion(char *convert_command, char *src, char *target);
 void generate_load_word(char *src, char *offset, char *target); // array indexing
 void generate_assignment(declare_type type, char *src, char *target, char *offset);
+void generate_label();
+void generate_for_tail(char *loopVarName, char *loopEndName, char *jumpLabel, bool isTo);
+void generate_for_start_condition(char *loopVarName, char *loopEndName, char *jumpLabel);
+void insert_label();
+char *get_current_label();
 // [*] Detect whether one of expressions is not literal value
 bool has_var(ExpressionRecord expr1, ExpressionRecord expr2);
 bool has_double(ExpressionRecord expr1, declare_type *ltype, ExpressionRecord expr2, declare_type *rtype);
 ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, operator_kind op);
 // [*] TODO: Make a type conversion action and return the pointer of the converted register
 Var *convert_and_create_tmp_var(declare_type src_type, char *src, declare_type target_type);
+char *expressionRecordToString(ExpressionRecord expr);
 #endif

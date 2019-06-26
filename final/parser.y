@@ -21,7 +21,7 @@ int lineno=1;
     operator_kind op; // [*] operator_kind
 }
 
-%token PROGRAM FAIL BEGIN_ END READ WRITE ID INTLITERAL FLTLITERAL EXPFLTLITERAL STRLITERAL LPAREN RPAREN LSQPAREN RSQPAREN SEMICOL COMMA ASSIGNOP PLUSOP MINUSOP MULTOP DIVOP NEQ GT LT GEQ LEQ EQ IF THEN ELSE ENDIF FOR TO ENDFOR WHILE ENDWHILE DECLARE AS INTEGER REAL FLOATTOK SCANEOF IGNORE NEWLINE
+%token PROGRAM FAIL BEGIN_ END READ WRITE ID INTLITERAL FLTLITERAL EXPFLTLITERAL STRLITERAL LPAREN RPAREN LSQPAREN RSQPAREN SEMICOL COMMA ASSIGNOP PLUSOP MINUSOP MULTOP DIVOP NEQ GT LT GEQ LEQ EQ IF THEN ELSE ENDIF FOR TO DOWNTO ENDFOR WHILE ENDWHILE DECLARE AS INTEGER REAL FLOATTOK SCANEOF IGNORE NEWLINE
 
 
 %left PLUSOP MINUSOP
@@ -46,13 +46,16 @@ Program_head: PROGRAM ID{
     free($2);
 };
 
-Stmt_list: Stmt SEMICOL
-         | Stmt_list Stmt SEMICOL
+Stmt_list: Stmt 
+         | Stmt_list Stmt 
          ;
 
  /* TODO: Add more statement type */
  /* Statement -> Declare | Expression | For loop | If | Function */
-Stmt: DeclareStmt | ExpressionStmt;
+Stmt: DeclareStmt SEMICOL| ExpressionStmt SEMICOL| ForStmt SEMICOL_OR_NONE;
+
+ /* A -> ; | lambda */
+SEMICOL_OR_NONE: SEMICOL | /*lambda*/;
 
 DeclareStmt: DECLARE Variable_list AS Type{
     // Flush Variable_list into symbol table and print declarations
@@ -108,7 +111,6 @@ ExpressionStmt: ID ASSIGNOP Expression /* ID = expression */ {
                 else if($3.kind == flt_literal_expr) type = float_;
                 else assert(0);
                 if(type != integer){
-                    // TODO: try to fix early return
                     yyerror("The expression in the square parentheses should be integer type");
                     return;
                 }
@@ -140,7 +142,6 @@ ExpressionStmt: ID ASSIGNOP Expression /* ID = expression */ {
                 }
                 else assert(0);
                 // Store $6 into it
-                // TODO: Add Int2Float and Float2Int
                 declare_type to_assign_type;
                 Var *tmpVar = NULL;
                 
@@ -196,6 +197,52 @@ ExpressionStmt: ID ASSIGNOP Expression /* ID = expression */ {
                     */
                 }
               ;
+
+ForStmt: ForHeader Stmt_list ENDFOR{
+            // [*] INC I
+            // [*] I_CMP I,100
+            // [*] JL lb&1
+            generate_for_tail(forHeadBuffer.loopVarName, forHeadBuffer.loopEndName, 
+                    forHeadBuffer.condition_success_label, forHeadBuffer.isTo);
+            // [*] lb&2:
+            generate_label(forHeadBuffer.condition_fail_label);
+       };
+
+ /*Ex. For( I := 1 TO 100 ) */
+ForHeader: FOR LPAREN ID ASSIGNOP Expression FOR_DIR Expression RPAREN{
+            Var *var = get_symbol_table_record($3, &symbol_table);
+            if(var == NULL){ yyerror("This variable does not exist"); return;}
+            if(var->decltype != integer){ yyerror("This variable should be integer type"); return;}
+            // [*] I_STORE 1, I
+            generate_assignment(integer, expressionRecordToString($5), $3, NULL);
+            // [*] Create success label and fail label
+            insert_label();
+            char *condition_success_label = get_current_label();
+            insert_label();
+            char *condition_fail_label = get_current_label();
+            // Put things into the for head buffer
+            forHeadBuffer.loopVarName = var->name;
+            forHeadBuffer.loopEndName = expressionRecordToString($7);
+            forHeadBuffer.condition_success_label = condition_success_label;
+            forHeadBuffer.condition_fail_label = condition_fail_label;
+            // [*] Check whether the condition fails
+            // I_CMP I, 100
+            // JGE lb&2
+            generate_for_start_condition(forHeadBuffer.loopVarName, 
+                forHeadBuffer.loopEndName, forHeadBuffer.condition_fail_label);
+            
+            // lb&1: 
+            generate_label(condition_success_label);
+            // Free ID
+            free($3);
+         };
+
+FOR_DIR: TO{
+            forHeadBuffer.isTo = 1; //true
+       }
+       | DOWNTO{
+            forHeadBuffer.isTo = 0; //false
+        };
 
 Expression: Expression PLUSOP Expression {
             $$ = expression_action($1, $3, plus);
@@ -254,6 +301,7 @@ Expression: Expression PLUSOP Expression {
                 Var *var = get_symbol_table_record($1, &symbol_table);
                 if(var->isarray == 0){
                     yyerror("This variable cannot be indexed");
+                    return;
                 }
                 declare_type type = search_symbol_table($1, &symbol_table);
                 // Generate a temporary variable with `type`
@@ -269,6 +317,7 @@ Expression: Expression PLUSOP Expression {
                     generate_load_word($1, literalstr, tmpSymbol_table.var_list[top].name);
                 }else if($3.kind == flt_literal_expr){
                     yyerror("Array indexing with double value is not supported");
+                    return;
                 }else assert(0);
 
                 // Add $$
@@ -276,7 +325,6 @@ Expression: Expression PLUSOP Expression {
                 $$.name = tmpSymbol_table.var_list[top].name;
                 // Free the memory
                 free($1);
-                
             }
           ;
 Number: INTLITERAL {
@@ -317,15 +365,15 @@ Var: ID {
         var_buf.var_list[top].array_size = $3.ival;
     }else if($3.kind == flt_literal_expr){
         yyerror("Array should be declared with integer type");
-        assert(0);
+        return;
     }else{
         yyerror("Array should be declared with literal intger value");
-        assert(0);
+        return;
     }
     var_buf.var_list[top].isarray = 1;
     var_buf.var_list[top].decltype = undefined;
     var_buf.size++;
-    }
+}
    ;
 
 %%
@@ -334,6 +382,7 @@ int yyerror(char *s){
 }
 
 int main(){
+    init_label_table(&labelTable);
     init_symbol_table(&symbol_table);
     init_symbol_table(&tmpSymbol_table);
     yyparse();
