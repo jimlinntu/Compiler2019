@@ -149,17 +149,34 @@ void generate_for_tail(char *loopVarName, char *loopEndName, char *jumpLabel, bo
     else printf("\tDEC %s\n", loopVarName);
 
     printf("\tI_CMP %s,%s\n", loopVarName, loopEndName);
+
     // Jump less than or greate than
     if(isTo) printf("\tJL %s\n", jumpLabel);
-    else printf("\tJL %s\n", jumpLabel);
+    else printf("\tJG %s\n", jumpLabel);
     printf("\n");
 
 }
-void generate_for_start_condition(char *loopVarName, char *loopEndName, char *jumpLabel){
+void generate_for_start_condition(char *loopVarName, char *loopEndName, char *jumpLabel, bool isTo){
     // I_CMP I, 100
     printf("\tI_CMP %s,%s\n", loopVarName, loopEndName);
+
     // JGE lb&2
-    printf("\tJGE %s\n", jumpLabel);
+    if(isTo) printf("\tJGE %s\n", jumpLabel);
+    else printf("\tJLE %s\n", jumpLabel);
+}
+void generate_cmp(declare_type type, char *src1, char *src2, char *target, comp_kind cmp){
+    static char *comp2string[6] = {"NE", "G", "L", "GE", "LE", "E"};
+    // I_CMP_E i1, i2, t
+    if(type == integer) printf("\tI_CMP_");
+    else if(type == float_) printf("\tF_CMP_");
+    else assert(0);
+    // 
+    printf("%s %s,%s,%s\n", comp2string[cmp], src1, src2, target);
+
+}
+void generate_and_or(char *src1, char *src2, char *target, logical_expr_kind logic){
+    static char *logic2string[2] = {"AND", "OR"};
+    printf("\t%s %s,%s,%s\n", logic2string[logic], src1, src2, target);
 }
 void insert_label(){
     snprintf(labelTable.labelName[labelTable.size], MAX_LITERAL_LEN, "lb&%d", labelTable.size+1);
@@ -346,3 +363,35 @@ char *expressionRecordToString(ExpressionRecord expr){
         return string;
     }else assert(0);
 };
+// Check whether the expression's type
+bool isInt(ExpressionRecord expr){
+    declare_type type;
+    if(expr.kind == id_expr){
+        type = search_symbol_table(expr.name, &symbol_table);
+    }else if(expr.kind == temp_expr){
+        type = search_symbol_table(expr.name, &tmpSymbol_table);
+    }else if(expr.kind == int_literal_expr){
+        type = integer;
+    }else type = float_;
+
+    if(type == integer) return 1;
+    else return 0;
+}
+declare_type getExpressionType(ExpressionRecord expr){
+    declare_type type;
+    if(expr.kind == id_expr){
+        type = search_symbol_table(expr.name, &symbol_table);
+    }else if(expr.kind == temp_expr){
+        type = search_symbol_table(expr.name, &tmpSymbol_table);
+    }else if(expr.kind == int_literal_expr){
+        type = integer;
+    }else type = float_;
+
+    return type;
+}
+// get the top variable in the tmpSymbol_table
+Var* get_tmp_top_var(){
+    int top = tmpSymbol_table.size-1;
+    assert(top >= 0);
+    return &tmpSymbol_table.var_list[top];
+}

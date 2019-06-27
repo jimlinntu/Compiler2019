@@ -19,9 +19,13 @@ int lineno=1;
     char *name; 
     ExpressionRecord record;
     operator_kind op; // [*] operator_kind
+    comp_kind comp; // [*] comparison operation kind
+    logical_expr_kind logic;
+    LogicalExpressionRecord logical_record;
 }
 
-%token PROGRAM FAIL BEGIN_ END READ WRITE ID INTLITERAL FLTLITERAL EXPFLTLITERAL STRLITERAL LPAREN RPAREN LSQPAREN RSQPAREN SEMICOL COMMA ASSIGNOP PLUSOP MINUSOP MULTOP DIVOP NEQ GT LT GEQ LEQ EQ IF THEN ELSE ENDIF FOR TO DOWNTO ENDFOR WHILE ENDWHILE DECLARE AS INTEGER REAL FLOATTOK SCANEOF IGNORE NEWLINE
+
+%token PROGRAM FAIL BEGIN_ END READ WRITE ID INTLITERAL FLTLITERAL EXPFLTLITERAL STRLITERAL LPAREN RPAREN LSQPAREN RSQPAREN SEMICOL COMMA ASSIGNOP PLUSOP MINUSOP MULTOP DIVOP NEQ GT LT GEQ LEQ EQ AND OR NOT IF THEN ELSE ENDIF FOR TO DOWNTO ENDFOR WHILE ENDWHILE DECLARE AS INTEGER REAL FLOATTOK SCANEOF IGNORE NEWLINE
 
 
 %left PLUSOP MINUSOP
@@ -33,6 +37,12 @@ int lineno=1;
 %type <dval> FLTLITERAL
 %type <type> Type
 %type <record> Number Expression
+
+%type <comp> Comp
+
+%type <logical_record> LogicalExpression SingletonLogicalExpression
+
+%type <logic> And_Or
 
 %%
 Start: Program_head BEGIN_ Stmt_list End
@@ -52,7 +62,7 @@ Stmt_list: Stmt
 
  /* TODO: Add more statement type */
  /* Statement -> Declare | Expression | For loop | If | Function */
-Stmt: DeclareStmt SEMICOL| ExpressionStmt SEMICOL| ForStmt SEMICOL_OR_NONE;
+Stmt: DeclareStmt SEMICOL| ExpressionStmt SEMICOL| ForStmt SEMICOL_OR_NONE | IfStmt SEMICOL_OR_NONE;
 
  /* A -> ; | lambda */
 SEMICOL_OR_NONE: SEMICOL | /*lambda*/;
@@ -199,9 +209,9 @@ ExpressionStmt: ID ASSIGNOP Expression /* ID = expression */ {
               ;
 
 ForStmt: ForHeader Stmt_list ENDFOR{
-            // [*] INC I
+            // [*] INC I or DEC I
             // [*] I_CMP I,100
-            // [*] JL lb&1
+            // [*] JL lb&1 or JG lb&1
             generate_for_tail(forHeadBuffer.loopVarName, forHeadBuffer.loopEndName, 
                     forHeadBuffer.condition_success_label, forHeadBuffer.isTo);
             // [*] lb&2:
@@ -212,7 +222,11 @@ ForStmt: ForHeader Stmt_list ENDFOR{
 ForHeader: FOR LPAREN ID ASSIGNOP Expression FOR_DIR Expression RPAREN{
             Var *var = get_symbol_table_record($3, &symbol_table);
             if(var == NULL){ yyerror("This variable does not exist"); return;}
-            if(var->decltype != integer){ yyerror("This variable should be integer type"); return;}
+            // Check whether the loop variable is integer type
+            if(var->decltype != integer){ yyerror("The loop variable should be integer type"); return;}
+            // Check two Expressions are integer type
+            if(isInt($5) != 1){ yyerror("The value assigned to the loop variable should be integer type"); return;}
+            if(isInt($7) != 1){ yyerror("The loop end variable should be integer type"); return;}
             // [*] I_STORE 1, I
             generate_assignment(integer, expressionRecordToString($5), $3, NULL);
             // [*] Create success label and fail label
@@ -227,9 +241,9 @@ ForHeader: FOR LPAREN ID ASSIGNOP Expression FOR_DIR Expression RPAREN{
             forHeadBuffer.condition_fail_label = condition_fail_label;
             // [*] Check whether the condition fails
             // I_CMP I, 100
-            // JGE lb&2
+            // JGE lb&2 or JLE lb&2
             generate_for_start_condition(forHeadBuffer.loopVarName, 
-                forHeadBuffer.loopEndName, forHeadBuffer.condition_fail_label);
+                forHeadBuffer.loopEndName, forHeadBuffer.condition_fail_label, forHeadBuffer.isTo);
             
             // lb&1: 
             generate_label(condition_success_label);
@@ -243,6 +257,66 @@ FOR_DIR: TO{
        | DOWNTO{
             forHeadBuffer.isTo = 0; //false
         };
+
+IfStmt: IfHeader THEN Stmt_list IfTail{
+      };
+
+ /* If(A >= 100000) */
+IfHeader: IF LPAREN LogicalExpression RPAREN{
+        };
+
+IfTail: ELSE Stmt_list ENDIF
+      | ENDIF;
+
+
+Comp: NEQ { $$ = neq; }
+    | GT { $$ = gt; }
+    | LT { $$ = lt; }
+    | GEQ { $$ = geq; }
+    | LEQ { $$ = leq; }
+    | EQ { $$ = eq; };
+
+  /* Left associativity */
+  /* Ex. (A >= 80) || !(B >= 10 || C < 0.1)*/
+  /* Ex. (A >= 80) || (B >= 10 || C < 0.1)*/
+LogicalExpression: LogicalExpression And_Or LogicalExpressionGroup{
+                    // always be integer
+                    // generate "and" "or"  instruction
+                    // Pass the variable
+                 }
+                 | LogicalExpressionGroup;
+  /* (B >= 10 || C < 0.1) */
+  /* LEG can be decomposed into ( LE )  (recursive fashion)*/
+LogicalExpressionGroup: LPAREN LogicalExpression RPAREN
+                      | SingletonLogicalExpression;
+                       
+ /* Support the parenthesis pair */
+ /* Ex. A >= 1000, B <= 100,  (A >= 1000), ((A >= 1000)) */
+SingletonLogicalExpression: Expression Comp Expression{
+                                // I_CMP_GE A, 1000, t ( <----- integer type  )
+                                declare_type lhs_type = getExpressionType($1);
+                                declare_type rhs_type = getExpressionType($3);
+                                if(lhs_type != rhs_type){ 
+                                    yyerror("LHS and RHS in a comparison should be the same type");
+                                    return;
+                                }
+                                // insert a temporary variable
+                                // `t` will always be integer type
+                                insert_tmp_symbol(integer); 
+
+                                Var *tmpVar = get_tmp_top_var();
+                                // generate the instruction
+                                generate_cmp(rhs_type, expressionRecordToString($1), 
+                                    expressionRecordToString($3), tmpVar->name, $2);
+                    
+                                // Pass the temporary variable
+                                $$.tmpVar = tmpVar;
+                          }
+                          ;
+
+And_Or: AND { $$ = and_; }
+      | OR { $$ = or_; }
+      ;
 
 Expression: Expression PLUSOP Expression {
             $$ = expression_action($1, $3, plus);

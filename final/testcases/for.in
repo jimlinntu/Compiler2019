@@ -9,4 +9,12 @@ Begin
     FOR(I := 1 TO 100)
         a := 7+9;
     ENDFOR
+    %% DOWNTO
+    FOR(I := 7 + 9 - 8 DOWNTO -1)
+        a := a + 1;
+    ENDFOR
+    %% More complicated expression
+    FOR(I := 7 + 9 - 8+a DOWNTO -1-b)
+        a := a + 1;
+    ENDFOR;
 End

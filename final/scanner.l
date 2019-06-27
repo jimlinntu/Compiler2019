@@ -80,6 +80,9 @@ LT          "<"
 GEQ         ">="
 LEQ         "<="
 EQ          "=="
+AND         "&&"
+NOT         "!"
+OR          "||"
 IF          {i}{f}
 THEN        {t}{h}{e}{n}
 ELSE        {e}{l}{s}{e}
@@ -139,6 +142,9 @@ SCANEOF     {s}{c}{a}{n}{e}{o}{f}
 {GEQ}       { return GEQ;}
 {LEQ}       { return LEQ;}
 {EQ}        { return EQ;}
+{AND}       { return AND;}
+{OR}        { return OR;}
+{NOT}       { return NOT;}
 {IF}        { return IF;}
 {THEN}      { return THEN;}
 {ELSE}      { return ELSE;}

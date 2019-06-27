@@ -17,6 +17,8 @@ typedef short bool;
 typedef enum {undefined, integer, float_} declare_type; // ex. declare ... as [declare_type]
 typedef enum { plus, minus, mult, div_ } operator_kind;
 typedef enum {id_expr, flt_literal_expr, int_literal_expr, temp_expr} expr_kind;
+typedef enum { neq, gt, lt, geq, leq, eq} comp_kind; // compare operation
+typedef enum { and_, or_, not_ } logical_expr_kind;
 
 typedef struct ExpressionRecord_ {
     expr_kind kind;
@@ -32,6 +34,9 @@ typedef struct Var_{
     bool isarray;
     declare_type decltype;
 } Var;
+typedef struct LogicalExpressionRecord_{
+    Var *tmpVar; // Saving temporary variable name
+}LogicalExpressionRecord;
 
 typedef struct VarBuffer_{
     Var var_list[MAX_VAR];
@@ -85,14 +90,19 @@ void generate_load_word(char *src, char *offset, char *target); // array indexin
 void generate_assignment(declare_type type, char *src, char *target, char *offset);
 void generate_label();
 void generate_for_tail(char *loopVarName, char *loopEndName, char *jumpLabel, bool isTo);
-void generate_for_start_condition(char *loopVarName, char *loopEndName, char *jumpLabel);
+void generate_for_start_condition(char *loopVarName, char *loopEndName, char *jumpLabel, bool isTo);
+void generate_cmp(declare_type type, char *src1, char *src2, char *target, comp_kind cmp);
+void generate_and_or(char *src1, char *src2, char *target, logical_expr_kind logic);
 void insert_label();
 char *get_current_label();
 // [*] Detect whether one of expressions is not literal value
 bool has_var(ExpressionRecord expr1, ExpressionRecord expr2);
 bool has_double(ExpressionRecord expr1, declare_type *ltype, ExpressionRecord expr2, declare_type *rtype);
 ExpressionRecord expression_action(ExpressionRecord $1, ExpressionRecord $3, operator_kind op);
-// [*] TODO: Make a type conversion action and return the pointer of the converted register
 Var *convert_and_create_tmp_var(declare_type src_type, char *src, declare_type target_type);
 char *expressionRecordToString(ExpressionRecord expr);
+bool isInt(ExpressionRecord expr);
+declare_type getExpressionType(ExpressionRecord expr);
+// get the top variable in the tmpSymbol_table
+Var* get_tmp_top_var();
 #endif

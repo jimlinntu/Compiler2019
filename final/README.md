@@ -41,6 +41,13 @@ make clean
 * Compare instruction
     * I_CMP i1,i2
     * F_CMP f1,f2
+    * [I|F]_CMP_E x1, x2, t (equal to)
+    * [I|F]_CMP_G x1, x2, t (greater than)
+    * [I|F]_CMP_GE x1, x2, t (greater equal than)
+    * [I|F]_CMP_L x1, x2, t (less than)
+    * [I|F]_CMP_LE x1, x2, t (less equal than)
+    * [I|F]_CMP_NE x1, x2, t (not equal to)
+    
 * Jump instruction
     * J,JE, JG, JGE, JL, JLE, JNE 
 * Subroutine operation
