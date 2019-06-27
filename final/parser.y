@@ -6,6 +6,7 @@
 #include <string.h>
 #include "y.tab.h" 
 int lineno=1;
+char *program_name;
 %}
 /* https://stackoverflow.com/questions/1430390/include-struct-in-the-union-def-with-bison-yacc */
 /* This part will be put into `y.tab.h` */
@@ -22,6 +23,7 @@ int lineno=1;
     comp_kind comp; // [*] comparison operation kind
     logical_expr_kind logic;
     LogicalExpressionRecord logical_record;
+    bool isTo; // [*] FOR_DIR
 }
 
 
@@ -40,27 +42,31 @@ int lineno=1;
 
 %type <comp> Comp
 
-%type <logical_record> LogicalExpression SingletonLogicalExpression
+%type <logical_record> LogicalExpression LogicalExpressionGroup AndLogicalExpression SingletonLogicalExpression
+%type <isTo> FOR_DIR
 
-%type <logic> And_Or
 
 %%
 Start: Program_head BEGIN_ Stmt_list End
      | Program_head BEGIN_ End /* [*] Deal with no statments situation*/
      ;
 End: END {
+    // Print halt
+    print_halt(program_name);
+    free(program_name); // free memory
+    // Print temporary variables declarations
     print_tmp_declaration();
 }
 Program_head: PROGRAM ID{
     printf("START %s\n", $2);
-    free($2);
+    program_name = $2; // save it for the usage of halting
 };
 
 Stmt_list: Stmt 
          | Stmt_list Stmt 
          ;
 
- /* TODO: Add more statement type */
+ 
  /* Statement -> Declare | Expression | For loop | If | Function */
 Stmt: DeclareStmt SEMICOL| ExpressionStmt SEMICOL| ForStmt SEMICOL_OR_NONE | IfStmt SEMICOL_OR_NONE;
 
@@ -195,16 +201,6 @@ ExpressionStmt: ID ASSIGNOP Expression /* ID = expression */ {
                 free($1);
               }
               | Expression {
-                    
-                    /*
-                    printf("Expression: \n");
-                    printf("kind = %d\n", $1.kind);
-                    if($1.kind == int_literal_expr){
-                        printf("Literal value: %d\n", $1.ival);
-                    }else if($1.kind == flt_literal_expr){
-                        printf("Literal value: %f\n", $1.dval);
-                    }
-                    */
                 }
               ;
 
@@ -212,10 +208,8 @@ ForStmt: ForHeader Stmt_list ENDFOR{
             // [*] INC I or DEC I
             // [*] I_CMP I,100
             // [*] JL lb&1 or JG lb&1
-            generate_for_tail(forHeadBuffer.loopVarName, forHeadBuffer.loopEndName, 
-                    forHeadBuffer.condition_success_label, forHeadBuffer.isTo);
             // [*] lb&2:
-            generate_label(forHeadBuffer.condition_fail_label);
+            generate_for_tail(); 
        };
 
  /*Ex. For( I := 1 TO 100 ) */
@@ -231,19 +225,18 @@ ForHeader: FOR LPAREN ID ASSIGNOP Expression FOR_DIR Expression RPAREN{
             generate_assignment(integer, expressionRecordToString($5), $3, NULL);
             // [*] Create success label and fail label
             insert_label();
-            char *condition_success_label = get_current_label();
+            char *condition_success_label = get_current_label(); // when the loop condition meets
             insert_label();
-            char *condition_fail_label = get_current_label();
+            char *condition_fail_label = get_current_label(); // when the loop condition fails
             // Put things into the for head buffer
-            forHeadBuffer.loopVarName = var->name;
-            forHeadBuffer.loopEndName = expressionRecordToString($7);
-            forHeadBuffer.condition_success_label = condition_success_label;
-            forHeadBuffer.condition_fail_label = condition_fail_label;
+            char *loopEndName = expressionRecordToString($7);
+            push_in_for_head_stack(var->name, loopEndName, 
+                        condition_success_label, condition_fail_label, $6);
             // [*] Check whether the condition fails
             // I_CMP I, 100
             // JGE lb&2 or JLE lb&2
-            generate_for_start_condition(forHeadBuffer.loopVarName, 
-                forHeadBuffer.loopEndName, forHeadBuffer.condition_fail_label, forHeadBuffer.isTo);
+            generate_for_start_condition(var->name, 
+                loopEndName, condition_fail_label, $6);
             
             // lb&1: 
             generate_label(condition_success_label);
@@ -252,22 +245,40 @@ ForHeader: FOR LPAREN ID ASSIGNOP Expression FOR_DIR Expression RPAREN{
          };
 
 FOR_DIR: TO{
-            forHeadBuffer.isTo = 1; //true
+            $$ = 1; //true
        }
        | DOWNTO{
-            forHeadBuffer.isTo = 0; //false
+            $$ = 0; //false
         };
 
-IfStmt: IfHeader THEN Stmt_list IfTail{
+IfStmt: IfHeader THEN Stmt_list{
+        // Jump to the out-of-if context
+        generate_if_context_end();
+      } IfTail{
+        // lb&2
+        generate_if_tail();
       };
+
+
 
  /* If(A >= 100000) */
 IfHeader: IF LPAREN LogicalExpression RPAREN{
+            // I_CMP $3 0 (evaulate whether this is true)
+            // JNE lb&1 (if not equal, jump)
+            generate_if_header($3.tmpVar->name);
         };
 
-IfTail: ELSE Stmt_list ENDIF
-      | ENDIF;
+ /* Note: you should be careful when the nested if structure occurs */
+IfTail: DummyElse Stmt_list ENDIF
+      | ENDIF{
+        // lb&1: 
+        generate_else_start();
+      };
 
+DummyElse: ELSE{
+        // lb&1: 
+        generate_else_start();
+    };
 
 Comp: NEQ { $$ = neq; }
     | GT { $$ = gt; }
@@ -276,19 +287,51 @@ Comp: NEQ { $$ = neq; }
     | LEQ { $$ = leq; }
     | EQ { $$ = eq; };
 
-  /* Left associativity */
+  /* Left associativity(left recursive fashion) */
   /* Ex. (A >= 80) || !(B >= 10 || C < 0.1)*/
   /* Ex. (A >= 80) || (B >= 10 || C < 0.1)*/
-LogicalExpression: LogicalExpression And_Or LogicalExpressionGroup{
+LogicalExpression: LogicalExpression OR AndLogicalExpression{
                     // always be integer
+                    insert_tmp_symbol(integer);
+                    Var *tmpVar = get_tmp_top_var();
                     // generate "and" "or"  instruction
+                    generate_and_or_not($1.tmpVar->name, $3.tmpVar->name, tmpVar->name, or_);
                     // Pass the variable
+                    $$.tmpVar = tmpVar;
                  }
-                 | LogicalExpressionGroup;
+                 | AndLogicalExpression{
+                    $$.tmpVar = $1.tmpVar;
+                 };
+  /* && should have higher precedence than ||  */
+AndLogicalExpression: AndLogicalExpression AND LogicalExpressionGroup{
+                        // always be integer
+                        insert_tmp_symbol(integer);
+                        Var *tmpVar = get_tmp_top_var();
+                        // generate "and" "or"  instruction
+                        generate_and_or_not($1.tmpVar->name, $3.tmpVar->name, tmpVar->name, and_);
+                        // Pass the variable
+                        $$.tmpVar = tmpVar;
+                    }
+                    | LogicalExpressionGroup{
+                        $$.tmpVar = $1.tmpVar;
+                    }
+                    ;
   /* (B >= 10 || C < 0.1) */
-  /* LEG can be decomposed into ( LE )  (recursive fashion)*/
-LogicalExpressionGroup: LPAREN LogicalExpression RPAREN
-                      | SingletonLogicalExpression;
+  /* LEG can be decomposed into ( LE ) or ! ( LE ) (recursive fashion)*/
+ /* LEG can also downgrade to a singleton logical expression */
+LogicalExpressionGroup: LPAREN LogicalExpression RPAREN{
+                            $$.tmpVar = $2.tmpVar;
+                      }
+                      | NOT LPAREN LogicalExpression RPAREN{
+                            insert_tmp_symbol(integer);
+                            Var *tmpVar = get_tmp_top_var();
+                            // NOT i1, t
+                            generate_and_or_not($3.tmpVar->name, NULL, tmpVar->name, not_);
+                            $$.tmpVar = tmpVar;
+                      }
+                      | SingletonLogicalExpression{
+                        $$.tmpVar = $1.tmpVar;
+                      };
                        
  /* Support the parenthesis pair */
  /* Ex. A >= 1000, B <= 100,  (A >= 1000), ((A >= 1000)) */
@@ -306,17 +349,16 @@ SingletonLogicalExpression: Expression Comp Expression{
 
                                 Var *tmpVar = get_tmp_top_var();
                                 // generate the instruction
-                                generate_cmp(rhs_type, expressionRecordToString($1), 
-                                    expressionRecordToString($3), tmpVar->name, $2);
+                                char lhs_str[MAX_LITERAL_LEN], rhs_str[MAX_LITERAL_LEN];
+                                strcpy(lhs_str, expressionRecordToString($1));
+                                strcpy(rhs_str, expressionRecordToString($3));
+                                generate_cmp(rhs_type, lhs_str, rhs_str, tmpVar->name, $2);
                     
                                 // Pass the temporary variable
                                 $$.tmpVar = tmpVar;
                           }
                           ;
 
-And_Or: AND { $$ = and_; }
-      | OR { $$ = or_; }
-      ;
 
 Expression: Expression PLUSOP Expression {
             $$ = expression_action($1, $3, plus);
@@ -455,11 +497,27 @@ int yyerror(char *s){
     fprintf(stderr, "The error occurs at line %d: %s\n", lineno, s);
 }
 
-int main(){
+int main(int argc, char **argv){
+    if(argc != 3){
+        printf("Micro/Ex Compiler Usage: ./parser <input program path> <output path>\n");
+        return 1;
+    }
+    extern FILE *yyin, *yyout;
+    
+    yyin = fopen(argv[1], "r");
+    assert(yyin);
+    // stdout redirection
+    freopen(argv[2], "w", stdout);
+    assert(stdout);
+    
+    
+    init_for_head_stack();
+    init_tail_label_stack();
     init_label_table(&labelTable);
     init_symbol_table(&symbol_table);
     init_symbol_table(&tmpSymbol_table);
     yyparse();
     destroy_symbol_table(&symbol_table);
     destroy_symbol_table(&tmpSymbol_table);
+    return 0;
 }

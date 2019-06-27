@@ -13,4 +13,12 @@ Begin
     IF( (A >= 10) || (B < 7)) THEN
         a := 1;
     ENDIF
+    %% Precedence: && > ||
+    IF( A >= 10+7-8*B-A || (C < 7.0) && D != 0.0 ) THEN
+        a := 1;
+    ENDIF
+    %% Complex parenthesis combination
+    IF( !(A >= A || (C < 7.0)) && !(D != 0.0) ) THEN
+        a := 1;
+    ENDIF;
 End

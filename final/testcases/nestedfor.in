@@ -1,0 +1,13 @@
+Program testNestedFor
+Begin
+    declare i, j as integer;
+    declare dummy as float;
+    FOR( i := 1 TO 100 )
+        dummy := 1;
+        FOR( j := i + 10 DOWNTO i)
+            dummy := 2;
+        ENDFOR
+        dummy := 3;
+    ENDFOR
+    dummy := 8;
+End

@@ -21,7 +21,5 @@ Begin
 
     %% Array indexing
     LLL[9+7+a];
-    LLL[1.0]; %% Error
-    a[7]; %% Error
    
 End

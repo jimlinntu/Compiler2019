@@ -1,0 +1,20 @@
+Program testNestedIf
+Begin
+    %% Nested if else
+    declare a, b, c, d as integer;
+    if(10 < 9) then
+        a := 1;
+        %% Second-level if
+        if( a == 1 || b == c && c == b || d != 7) then
+            a := 2;
+        else
+            a := 3;
+        endif
+        %% out of if
+        b := c + d ;
+    else
+        a := 4;
+    endif
+    %% out of if
+    c := d + b;
+End

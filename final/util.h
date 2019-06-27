@@ -57,20 +57,35 @@ typedef struct LabelTable_{
 } LabelTable;
 
 typedef struct ForHeadBuffer_{
-    char *loopVarName;
-    char *loopEndName;
-    char *condition_success_label;
-    char *condition_fail_label;
+    char *loopVarName; // A variable name
+    char loopEndName[MAX_LITERAL_LEN]; // A variable or a literal value
+    char *condition_success_label; // points to a record in the label table
+    char *condition_fail_label; // points to a record in the label table
     bool isTo; // true: to, false: downto
 } ForHeadBuffer;
+
+#define STACK_SIZE 1000
+typedef struct LabelStack_{
+    int top;
+    char *labelName[STACK_SIZE]; // point to LabelTable's record
+} LabelStack;
+
+typedef struct ForHeadStack_{
+    int top;
+    ForHeadBuffer buffer_list[STACK_SIZE];
+} ForHeadStack;
+
+
 
 extern SymbolTable symbol_table; // For variables
 extern SymbolTable tmpSymbol_table; // For temporary variables
 extern LabelTable labelTable; // For recording the label counter
-extern ForHeadBuffer forHeadBuffer;
+extern LabelStack ifTailLabelStack, outOfIfLabelStack;
+extern ForHeadStack forHeadStack;
 
 
-
+void init_for_head_stack();
+void init_tail_label_stack();
 void init_label_table(LabelTable *lt);
 void init_symbol_table(SymbolTable *table);
 void destroy_symbol_table(SymbolTable *table);
@@ -82,17 +97,21 @@ void flush_var_buf(declare_type type);
 void print_type(declare_type type);
 void print_declaration();
 void print_tmp_declaration();
+void print_halt(char *program_name);
 char *op2string(operator_kind op_kind);
 void generate_arithmetic(declare_type type, char *op, char *src1, char *src2, char *target);
-// TODO: 
 void generate_conversion(char *convert_command, char *src, char *target);
 void generate_load_word(char *src, char *offset, char *target); // array indexing
 void generate_assignment(declare_type type, char *src, char *target, char *offset);
 void generate_label();
-void generate_for_tail(char *loopVarName, char *loopEndName, char *jumpLabel, bool isTo);
+void generate_for_tail();
 void generate_for_start_condition(char *loopVarName, char *loopEndName, char *jumpLabel, bool isTo);
 void generate_cmp(declare_type type, char *src1, char *src2, char *target, comp_kind cmp);
-void generate_and_or(char *src1, char *src2, char *target, logical_expr_kind logic);
+void generate_and_or_not(char *src1, char *src2, char *target, logical_expr_kind logic);
+void generate_if_header(char *src);
+void generate_else_start();
+void generate_if_tail();
+void generate_if_context_end();
 void insert_label();
 char *get_current_label();
 // [*] Detect whether one of expressions is not literal value
@@ -105,4 +124,7 @@ bool isInt(ExpressionRecord expr);
 declare_type getExpressionType(ExpressionRecord expr);
 // get the top variable in the tmpSymbol_table
 Var* get_tmp_top_var();
+// 
+void push_in_for_head_stack(char *loopVarName, char *loopEndName, 
+            char *condition_success_label, char *condition_fail_label, bool isTo);
 #endif

@@ -3,7 +3,7 @@ Begin
     declare a, b, c, p[100] as integer;
     declare d, e, f[10] as float;
 
-    %% Integer add
+    %% 
     b := 3;
     c := 5;
     p[0] := 7 + 8;

@@ -3,8 +3,17 @@ VarBuffer var_buf;
 SymbolTable symbol_table; // For variables
 SymbolTable tmpSymbol_table; // For temporary variables
 LabelTable labelTable; // label table
-ForHeadBuffer forHeadBuffer;
+LabelStack ifTailLabelStack, outOfIfLabelStack;
+ForHeadStack forHeadStack;
 
+
+void init_for_head_stack(){
+    forHeadStack.top = 0;
+}
+void init_tail_label_stack(){
+    ifTailLabelStack.top = 0;
+    outOfIfLabelStack.top = 0;
+}
 void init_label_table(LabelTable *lt){
     lt->size = 0;
 }
@@ -85,7 +94,7 @@ void print_declaration(){
     Var *var;
     for(int i = 0; i < var_buf.size; i++){
         var = &var_buf.var_list[i];
-        printf("\tDeclare ");
+        printf("\t\tDeclare ");
         printf("%s, ", var->name);
         print_type(var->decltype);
         if(var->isarray) printf("_array, %d", var->array_size);
@@ -98,17 +107,20 @@ void print_tmp_declaration(){
     printf("\n");
     for(int i = 0; i < tmpSymbol_table.size; i++){
         var = &tmpSymbol_table.var_list[i];
-        printf("\tDeclare %s, ", var->name);
+        printf("\t\tDeclare %s, ", var->name);
         print_type(var->decltype);
         printf("\n");
     }
+}
+void print_halt(char *program_name){
+    printf("\t\tHALT %s\n", program_name);
 }
 char *op2string(operator_kind op_kind){
     static char op2string_array[10][100] = {"ADD", "SUB", "MUL", "DIV"};
     return op2string_array[op_kind];
 }
 void generate_arithmetic(declare_type type, char *op, char *src1, char *src2, char *target){
-    printf("\t");
+    printf("\t\t");
     if(type == integer) printf("I_");
     else if(type == float_) printf("F_");
     else assert(0);
@@ -123,13 +135,13 @@ void generate_arithmetic(declare_type type, char *op, char *src1, char *src2, ch
     }
 }
 void generate_conversion(char *convert_command, char *src, char *target){
-    printf("\t%s %s, %s\n", convert_command, src, target);
+    printf("\t\t%s %s, %s\n", convert_command, src, target);
 }
 void generate_load_word(char *src, char *offset, char *target){
-    printf("\tLOAD %s, %s, %s\n", src, offset, target);
+    printf("\t\tLOAD %s, %s, %s\n", src, offset, target);
 }
 void generate_assignment(declare_type type, char *src, char *target, char *offset){
-    printf("\t");
+    printf("\t\t");
     if(type == float_) printf("F_");
     else if(type == integer) printf("I_");
     else assert(0);
@@ -141,42 +153,81 @@ void generate_assignment(declare_type type, char *src, char *target, char *offse
     }
 }
 void generate_label(char *labelName){
-    printf("%s:", labelName);
+    printf("%s:\n", labelName);
 }
-void generate_for_tail(char *loopVarName, char *loopEndName, char *jumpLabel, bool isTo){
+void generate_for_tail(){
+    ForHeadBuffer *buf = &forHeadStack.buffer_list[forHeadStack.top-1];
     // Increment or decrement
-    if(isTo) printf("\tINC %s\n", loopVarName);
-    else printf("\tDEC %s\n", loopVarName);
+    if(buf->isTo) printf("\t\tINC %s\n", buf->loopVarName);
+    else printf("\t\tDEC %s\n", buf->loopVarName);
 
-    printf("\tI_CMP %s,%s\n", loopVarName, loopEndName);
+    printf("\t\tI_CMP %s,%s\n", buf->loopVarName, buf->loopEndName);
 
     // Jump less than or greate than
-    if(isTo) printf("\tJL %s\n", jumpLabel);
-    else printf("\tJG %s\n", jumpLabel);
+    if(buf->isTo) printf("\t\tJL %s\n", buf->condition_success_label);
+    else printf("\t\tJG %s\n", buf->condition_success_label);
     printf("\n");
+    
+    // lb&2:
+    generate_label(buf->condition_fail_label);
+    // Pop out the element from the stack
+    forHeadStack.top--;
 
 }
 void generate_for_start_condition(char *loopVarName, char *loopEndName, char *jumpLabel, bool isTo){
     // I_CMP I, 100
-    printf("\tI_CMP %s,%s\n", loopVarName, loopEndName);
+    printf("\t\tI_CMP %s,%s\n", loopVarName, loopEndName);
 
     // JGE lb&2
-    if(isTo) printf("\tJGE %s\n", jumpLabel);
-    else printf("\tJLE %s\n", jumpLabel);
+    if(isTo) printf("\t\tJGE %s\n", jumpLabel);
+    else printf("\t\tJLE %s\n", jumpLabel);
 }
 void generate_cmp(declare_type type, char *src1, char *src2, char *target, comp_kind cmp){
     static char *comp2string[6] = {"NE", "G", "L", "GE", "LE", "E"};
     // I_CMP_E i1, i2, t
-    if(type == integer) printf("\tI_CMP_");
-    else if(type == float_) printf("\tF_CMP_");
+    if(type == integer) printf("\t\tI_CMP_");
+    else if(type == float_) printf("\t\tF_CMP_");
     else assert(0);
     // 
     printf("%s %s,%s,%s\n", comp2string[cmp], src1, src2, target);
 
 }
-void generate_and_or(char *src1, char *src2, char *target, logical_expr_kind logic){
-    static char *logic2string[2] = {"AND", "OR"};
-    printf("\t%s %s,%s,%s\n", logic2string[logic], src1, src2, target);
+void generate_and_or_not(char *src1, char *src2, char *target, logical_expr_kind logic){
+    static char *logic2string[3] = {"AND", "OR", "NOT"};
+
+    if(logic != not_) printf("\t\t%s %s,%s,%s\n", logic2string[logic], src1, src2, target);
+    else printf("\t\t%s %s,%s\n", logic2string[logic], src1, target);
+}
+void generate_if_header(char *src){
+    // I_CMP $3 1 (evaulate whether this is true)
+    // JNE lb&2 (if not equal, jump)
+    // lb&1: 
+    printf("\t\tI_CMP %s,1\n", src);
+    insert_label();
+    char *else_part_label = get_current_label();
+    insert_label();
+    char *out_of_if_part_label = get_current_label();
+    printf("\t\tJNE %s\n", else_part_label);
+
+    // Push else part into the stack
+    ifTailLabelStack.labelName[ifTailLabelStack.top++] = else_part_label;
+    outOfIfLabelStack.labelName[outOfIfLabelStack.top++] = out_of_if_part_label;
+}
+void generate_else_start(){
+    // Pop the stack 
+    char *else_part_label = ifTailLabelStack.labelName[--ifTailLabelStack.top];
+    // lb&2: 
+    printf("%s:\n", else_part_label);
+}
+void generate_if_tail(){
+    char *out_of_if_part_label = outOfIfLabelStack.labelName[--outOfIfLabelStack.top];
+    printf("%s:\n", out_of_if_part_label);
+}
+// When the context of a if ends, you should make it JUMP
+void generate_if_context_end(){
+    // Take the top of the stack but do not pop it out
+    char *out_of_if_part_label = outOfIfLabelStack.labelName[outOfIfLabelStack.top-1];
+    printf("\t\tJ %s\n", out_of_if_part_label);
 }
 void insert_label(){
     snprintf(labelTable.labelName[labelTable.size], MAX_LITERAL_LEN, "lb&%d", labelTable.size+1);
@@ -394,4 +445,19 @@ Var* get_tmp_top_var(){
     int top = tmpSymbol_table.size-1;
     assert(top >= 0);
     return &tmpSymbol_table.var_list[top];
+}
+// push an element into the ForHeadStack
+void push_in_for_head_stack(char *loopVarName, char *loopEndName, 
+            char *condition_success_label, char *condition_fail_label, bool isTo){
+    int top = forHeadStack.top;
+    ForHeadBuffer *buf = &forHeadStack.buffer_list[top];
+
+    buf->loopVarName = loopVarName; // Because this must points to a record in the symbol table
+    strcpy(buf->loopEndName, loopEndName); // Copy the string
+    buf->condition_success_label = condition_success_label;
+    buf->condition_fail_label = condition_fail_label;
+    buf->isTo = isTo;
+
+    forHeadStack.top++;
+    
 }
