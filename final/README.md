@@ -2,21 +2,49 @@
 ```
 .
 ├── Makefile
-├── declare.ts (typescript file that record the output of `./parser < testcases/declare.in`)
+├── README.md
 ├── parser.y
 ├── scanner.l
-└── testcases
-    ├── declare.in
-    └── declare.out
+├── testcases
+│   ├── assignment.in
+│   ├── declare.in
+│   ├── expression.in
+│   ├── for.in
+│   ├── if.in
+│   ├── nestedfor.in
+│   └── nestedif.in
+├── util.c
+└── util.h
 ```
 
 # How to run
 ```
 make
-diff <(./parser < testcases/declare.in) testcases/declare.out
+./micro-ex-compiler <input program path> <output path>
 make clean
 ```
 
+# What I have learned and experienced during the implementation
+* I learned how to design these semantic records' data structure
+* I found that passing these semantic records' turned out to be a complicated work. Sometimes I was a little bit lost in the code I written.
+* I use Git version control to track my progress whenever I completed some features of this compiler.
+* It is very hard to maintain a clean code base during writting this compiler. There were just too many parameters or variables to pass to another place to use.
+* I thoroughly generated these testcases in order to test all the possible branches in my code. This helped my pick out some bugs.
+
+# What I have implemented
+- [x] Declaration (Track the nonterminal `DeclareStmt` or use `testcases/declare.in` to test)
+- [x] Assignment (Track the nonterminal `ExpressionStmt` or use `testcases/assignment.in` to test)
+- [x] For loop
+- [x] For loop condition with any complex expression
+- [x] Nested for loop support
+- [x] If statement
+- [x] If statement with sophisticated logical expressions
+- [x] Nested if statement support
+
+# Copyright claim
+These codes are fully implemented by myself.
+
+# Appendix
 ## Target Assembly Language
 * Variable Variable declaration instruction
     * Declare A, Integer
@@ -31,8 +59,9 @@ make clean
     * I_UMINUS i1,t
     * INC I
     * DEC I
-    * IntToFloat i1, t (type conversion)
-    * FloatToInt f1, t (type conversion)
+* Type conversion instructions
+    * IntToFloat i1, t 
+    * FloatToInt f1, t
 * Assignment
     * I_Store i1,t
     * I_Store i1,offset(t) (Store i1 into MEM[t + offset])
@@ -47,15 +76,5 @@ make clean
     * [I|F]_CMP_L x1, x2, t (less than)
     * [I|F]_CMP_LE x1, x2, t (less equal than)
     * [I|F]_CMP_NE x1, x2, t (not equal to)
-    
 * Jump instruction
     * J,JE, JG, JGE, JL, JLE, JNE 
-* Subroutine operation
-    * CALL rn,a1,a2
-
-
-
-## TODO
-- [ ] Check `ID` memory leakage problem
-- [ ] Make sure even when `yyerror` occurs, the compiler can still compile the following line
-

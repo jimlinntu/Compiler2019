@@ -499,7 +499,7 @@ int yyerror(char *s){
 
 int main(int argc, char **argv){
     if(argc != 3){
-        printf("Micro/Ex Compiler Usage: ./parser <input program path> <output path>\n");
+        printf("Micro/Ex Compiler Usage: ./micro-ex-compiler <input program path> <output path>\n");
         return 1;
     }
     extern FILE *yyin, *yyout;
