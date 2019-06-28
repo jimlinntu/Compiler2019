@@ -1,21 +1,45 @@
+# Compiler Final Project
+This project code base demonstrates how to build a Micro/Ex compiler.
+
+# Table of Content
+* [Environment](#Environment)
+* [Folder Structure](#folder)
+* [How to run](#howtorun)
+* [What I have learned and experienced during the implementation](#learned)
+* [What I have implemented](#implemented)
+* [Copyright claim](#copyright)
+* [Appendix](#Appendix)
+
+# Environment
+* Ubuntu 18.04 Bash
+* Yacc(bison (GNU Bison) 3.0.4)
+* Lex(flex version 2.5.4)
+* GNU Make
+
+<a name="folder" />
+
 # Folder Structure
 ```
 .
 ├── Makefile
 ├── README.md
-├── parser.y
-├── scanner.l
+├── parser.y ( the yacc file )
+├── scanner.l ( the lex file )
+├── spec.ppt ( the final project specification )
 ├── testcases
 │   ├── assignment.in
 │   ├── declare.in
 │   ├── expression.in
 │   ├── for.in
+│   ├── if-for-nested.in
 │   ├── if.in
 │   ├── nestedfor.in
 │   └── nestedif.in
 ├── util.c
 └── util.h
 ```
+
+<a name="howtorun" />
 
 # How to run
 ```
@@ -24,57 +48,72 @@ make
 make clean
 ```
 
+<a name="learned" />
+
 # What I have learned and experienced during the implementation
 * I learned how to design these semantic records' data structure
-* I found that passing these semantic records' turned out to be a complicated work. Sometimes I was a little bit lost in the code I written.
+* I found that passing these semantic records' turned out to be a complicated work. Sometimes I was a little bit lost in the code I had written.
 * I use Git version control to track my progress whenever I completed some features of this compiler.
 * It is very hard to maintain a clean code base during writting this compiler. There were just too many parameters or variables to pass to another place to use.
 * I thoroughly generated these testcases in order to test all the possible branches in my code. This helped my pick out some bugs.
 
+<a name="implemented" />
+
 # What I have implemented
-- [x] Declaration (Track the nonterminal `DeclareStmt` or use `testcases/declare.in` to test)
-- [x] Assignment (Track the nonterminal `ExpressionStmt` or use `testcases/assignment.in` to test)
-- [x] For loop
-- [x] For loop condition with any complex expression
-- [x] Nested for loop support
-- [x] If statement
-- [x] If statement with sophisticated logical expressions
-- [x] Nested if statement support
+- [x] Declaration ( track the nonterminal `DeclareStmt` or use `testcases/declare.in` to test)
+- [x] Assignment ( track the nonterminal `ExpressionStmt` or use `testcases/assignment.in` to test)
+- [x] For loop ( track the nonterminal `ForStmt` or  use `testcases/for.in` )
+- [x] For loop condition with complex expressions ( track the nonterminal `ForHeader` or  use `testcases/for.in` )
+- [x] Nested for loop support ( track the data structure `extern LabelStack ifTailLabelStack, outOfIfLabelStack;` in `util.h` or use `testcases/nestedfor.in` to test )
+- [x] If statement ( track the nonterminal `IfHeader` or use `testcases/if.in` to test )
+- [x] If statement with sophisticated logical expressions ( Note that: as C language specification, `&&` would have higher precendence than `||`) ( track the nonterminal `LogicalExpression` or use `testcases/if.in` to test )
+- [x] Nested if statement support ( track the data structure `extern ForHeadStack forHeadStack;` in `util.h` or use `testcases/nestedif.in` to test )
+- [x] If-for nested statement support ( use `testcases/if-for-nested.in` to test )
+
+<a name="copyright" />
 
 # Copyright claim
 These codes are fully implemented by myself.
+
+<a name="Appendix" />
 
 # Appendix
 ## Target Assembly Language
 * Variable Variable declaration instruction
     * Declare A, Integer
-    * Declare A, Integer_array,20
+    * Declare A, Integer\_array,20
     * Declare B, Float
-    * Declare B, Float_array,20
+    * Declare B, Float\_array,20
 * Arithmetic instruction
-    * I_SUB i1,i2,t
-    * I_ADD i1,i2,t
-    * I_DIV i1,i2,t
-    * I_MUL i1,i2,t
-    * I_UMINUS i1,t
+    * I\_SUB i1,i2,t
+    * I\_ADD i1,i2,t
+    * I\_DIV i1,i2,t
+    * I\_MUL i1,i2,t
+    * I\_UMINUS i1,t
     * INC I
     * DEC I
 * Type conversion instructions
     * IntToFloat i1, t 
     * FloatToInt f1, t
+* Load instruction:
+    * LOAD src, offset, target ( Load a `target = src[offset]` )
 * Assignment
-    * I_Store i1,t
-    * I_Store i1,offset(t) (Store i1 into MEM[t + offset])
-    * F_Store f1,t
-    * I_Store f1,offset(t) (Store f1 into MEM[t + offset])
+    * I\_Store i1,t
+    * I\_Store i1,offset(t) (Store i1 into MEM[t + offset])
+    * F\_Store f1,t
+    * I\_Store f1,offset(t) (Store f1 into MEM[t + offset])
 * Compare instruction
-    * I_CMP i1,i2
-    * F_CMP f1,f2
-    * [I|F]_CMP_E x1, x2, t (equal to)
-    * [I|F]_CMP_G x1, x2, t (greater than)
-    * [I|F]_CMP_GE x1, x2, t (greater equal than)
-    * [I|F]_CMP_L x1, x2, t (less than)
-    * [I|F]_CMP_LE x1, x2, t (less equal than)
-    * [I|F]_CMP_NE x1, x2, t (not equal to)
+    * I\_CMP i1,i2
+    * F\_CMP f1,f2
+    * [I|F]\_CMP\_E x1, x2, t (equal to)
+    * [I|F]\_CMP\_G x1, x2, t (greater than)
+    * [I|F]\_CMP\_GE x1, x2, t (greater equal than)
+    * [I|F]\_CMP\_L x1, x2, t (less than)
+    * [I|F]\_CMP\_LE x1, x2, t (less equal than)
+    * [I|F]\_CMP\_NE x1, x2, t (not equal to)
 * Jump instruction
     * J,JE, JG, JGE, JL, JLE, JNE 
+* Logical instruction
+    * AND b1, b2, t
+    * OR b1, b2, t
+    * NOT b, t

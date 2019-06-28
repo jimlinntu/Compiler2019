@@ -1,0 +1,59 @@
+		START fortest
+		Declare a, Integer
+		Declare b, Integer
+		Declare I, Integer
+
+		I_ADD 4, a, T&1
+		I_ADD 7, b, T&2
+		I_Store T&1, I
+		I_CMP I,T&2
+		JGE lb&2
+lb&1:
+		I_Store 16, a
+		INC I
+		I_CMP I,T&2
+		JL lb&1
+
+lb&2:
+		I_Store 1, I
+		I_CMP I,100
+		JGE lb&4
+lb&3:
+		I_Store 16, a
+		INC I
+		I_CMP I,100
+		JL lb&3
+
+lb&4:
+		I_Store 8, I
+		I_CMP I,-1
+		JLE lb&6
+lb&5:
+		I_ADD a, 1, T&3
+		I_Store T&3, a
+		DEC I
+		I_CMP I,-1
+		JG lb&5
+
+lb&6:
+		I_ADD 8, a, T&4
+		I_SUB -1, b, T&5
+		I_Store T&4, I
+		I_CMP I,T&5
+		JLE lb&8
+lb&7:
+		I_ADD a, 1, T&6
+		I_Store T&6, a
+		DEC I
+		I_CMP I,T&5
+		JG lb&7
+
+lb&8:
+		HALT fortest
+
+		Declare T&1, Integer
+		Declare T&2, Integer
+		Declare T&3, Integer
+		Declare T&4, Integer
+		Declare T&5, Integer
+		Declare T&6, Integer

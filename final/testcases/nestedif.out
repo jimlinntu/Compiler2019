@@ -1,0 +1,44 @@
+		START testNestedIf
+		Declare a, Integer
+		Declare b, Integer
+		Declare c, Integer
+		Declare d, Integer
+
+		I_CMP_L 10,9,T&1
+		I_CMP T&1,1
+		JNE lb&1
+		I_Store 1, a
+		I_CMP_E a,1,T&2
+		I_CMP_E b,c,T&3
+		I_CMP_E c,b,T&4
+		AND T&3,T&4,T&5
+		OR T&2,T&5,T&6
+		I_CMP_NE d,7,T&7
+		OR T&6,T&7,T&8
+		I_CMP T&8,1
+		JNE lb&3
+		I_Store 2, a
+		J lb&4
+lb&3:
+		I_Store 3, a
+lb&4:
+		I_ADD c, d, T&9
+		I_Store T&9, b
+		J lb&2
+lb&1:
+		I_Store 4, a
+lb&2:
+		I_ADD d, b, T&10
+		I_Store T&10, c
+		HALT testNestedIf
+
+		Declare T&1, Integer
+		Declare T&2, Integer
+		Declare T&3, Integer
+		Declare T&4, Integer
+		Declare T&5, Integer
+		Declare T&6, Integer
+		Declare T&7, Integer
+		Declare T&8, Integer
+		Declare T&9, Integer
+		Declare T&10, Integer

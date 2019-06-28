@@ -1,0 +1,21 @@
+Program generalTest
+Begin
+    declare end_, jimlin as float;
+    declare i as integer;
+    declare ret as integer;
+    %% if with a for loop nested inside it
+    if( end_ < 10.0 && jimlin > 0.0 || !(jimlin == 7.)  && end_ > 0.) then
+        ret := 999;
+        for(i := 7 DOWNTO 1)
+            ret := 8;
+        endfor
+        ret := 900;
+    else
+        ret := 11;
+        for(i := 7 TO 100)
+            ret := 9;
+        endfor
+        ret := 18;
+    endif
+End
+

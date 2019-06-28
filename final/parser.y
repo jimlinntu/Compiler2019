@@ -58,7 +58,7 @@ End: END {
     print_tmp_declaration();
 }
 Program_head: PROGRAM ID{
-    printf("START %s\n", $2);
+    printf("\t\tSTART %s\n", $2);
     program_name = $2; // save it for the usage of halting
 };
 
@@ -499,7 +499,7 @@ int yyerror(char *s){
 
 int main(int argc, char **argv){
     if(argc != 3){
-        printf("Micro/Ex Compiler Usage: ./micro-ex-compiler <input program path> <output path>\n");
+        fprintf(stderr, "Micro/Ex Compiler Usage: ./micro-ex-compiler <input program path> <output path>\n");
         return 1;
     }
     extern FILE *yyin, *yyout;

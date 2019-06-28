@@ -1,0 +1,43 @@
+		START expressiontest
+		Declare a, Integer
+		Declare b, Integer
+		Declare c, Integer
+
+		Declare d, Float
+		Declare e, Float
+		Declare f, Float
+
+		Declare LLL, Float_array, 10
+
+		Declare jim, Integer_array, 26
+
+		I_ADD a, b, T&1
+		IntToFloat a, T&2
+		F_ADD T&2, d, T&3
+		F_ADD d, e, T&4
+		I_ADD a, 3, T&5
+		IntToFloat a, T&6
+		F_ADD T&6, 4.000000, T&7
+		F_ADD d, 3, T&8
+		F_ADD d, 3.000000, T&9
+		I_ADD a, 15, T&10
+		I_ADD a, b, T&11
+		I_MUL T&11, 6, T&12
+		I_ADD 16, a, T&13
+		LOAD LLL, T&13, T&14
+		HALT expressiontest
+
+		Declare T&1, Integer
+		Declare T&2, Float
+		Declare T&3, Float
+		Declare T&4, Float
+		Declare T&5, Integer
+		Declare T&6, Float
+		Declare T&7, Float
+		Declare T&8, Float
+		Declare T&9, Float
+		Declare T&10, Integer
+		Declare T&11, Integer
+		Declare T&12, Integer
+		Declare T&13, Integer
+		Declare T&14, Float

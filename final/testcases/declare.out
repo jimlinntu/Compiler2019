@@ -1,0 +1,11 @@
+		START testP
+		Declare I, Integer
+
+		Declare A, Float
+		Declare B, Float
+		Declare C, Float
+		Declare D, Float
+		Declare LLL, Float_array, 100
+
+		HALT testP
+

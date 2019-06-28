@@ -1,0 +1,32 @@
+		START testNestedFor
+		Declare i, Integer
+		Declare j, Integer
+
+		Declare dummy, Float
+
+		I_Store 1, i
+		I_CMP i,100
+		JGE lb&2
+lb&1:
+		F_Store 1.000000, dummy
+		I_ADD i, 10, T&1
+		I_Store T&1, j
+		I_CMP j,i
+		JLE lb&4
+lb&3:
+		F_Store 2.000000, dummy
+		DEC j
+		I_CMP j,i
+		JG lb&3
+
+lb&4:
+		F_Store 3.000000, dummy
+		INC i
+		I_CMP i,100
+		JL lb&1
+
+lb&2:
+		F_Store 8.000000, dummy
+		HALT testNestedFor
+
+		Declare T&1, Integer

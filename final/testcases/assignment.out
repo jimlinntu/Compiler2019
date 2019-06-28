@@ -1,0 +1,92 @@
+		START testAssignment
+		Declare a, Integer
+		Declare b, Integer
+		Declare c, Integer
+		Declare p, Integer_array, 100
+
+		Declare d, Float
+		Declare e, Float
+		Declare f, Float_array, 10
+
+		I_Store 3, b
+		I_Store 5, c
+		I_ADD p, 0, T&1
+		I_Store 15, 0(T&1)
+		I_ADD b, c, T&2
+		I_Store T&2, a
+		IntToFloat c, T&3
+		F_Store T&3, e
+		I_ADD c, 3, T&4
+		IntToFloat T&4, T&5
+		F_Store T&5, d
+		F_Store 128.000000, e
+		F_Store 128.000000, e
+		I_ADD f, 0, T&6
+		IntToFloat c, T&7
+		F_Store T&7, 0(T&6)
+		I_ADD c, 3, T&8
+		I_ADD f, a, T&9
+		IntToFloat T&8, T&10
+		F_Store T&10, 0(T&9)
+		I_MUL a, 7, T&11
+		I_ADD T&11, 9, T&12
+		I_SUB T&12, 10, T&13
+		I_ADD f, T&13, T&14
+		F_Store 2.285714, 0(T&14)
+		I_ADD a, 1, T&15
+		I_ADD f, T&15, T&16
+		F_Store 2.000000, 0(T&16)
+		FloatToInt d, T&17
+		I_Store T&17, a
+		F_ADD d, 8, T&18
+		FloatToInt T&18, T&19
+		I_Store T&19, a
+		I_Store -32, c
+		I_Store -32, c
+		I_ADD p, 0, T&20
+		FloatToInt d, T&21
+		I_Store T&21, 0(T&20)
+		F_DIV d, 7, T&22
+		I_ADD p, a, T&23
+		FloatToInt T&22, T&24
+		I_Store T&24, 0(T&23)
+		I_ADD a, 1, T&25
+		I_ADD p, T&25, T&26
+		I_Store 7, 0(T&26)
+		I_ADD a, 7, T&27
+		I_SUB T&27, b, T&28
+		I_ADD T&28, 10, T&29
+		I_ADD p, T&29, T&30
+		I_Store 3, 0(T&30)
+		HALT testAssignment
+
+		Declare T&1, Integer
+		Declare T&2, Integer
+		Declare T&3, Float
+		Declare T&4, Integer
+		Declare T&5, Float
+		Declare T&6, Integer
+		Declare T&7, Float
+		Declare T&8, Integer
+		Declare T&9, Integer
+		Declare T&10, Float
+		Declare T&11, Integer
+		Declare T&12, Integer
+		Declare T&13, Integer
+		Declare T&14, Integer
+		Declare T&15, Integer
+		Declare T&16, Integer
+		Declare T&17, Integer
+		Declare T&18, Float
+		Declare T&19, Integer
+		Declare T&20, Integer
+		Declare T&21, Integer
+		Declare T&22, Float
+		Declare T&23, Integer
+		Declare T&24, Integer
+		Declare T&25, Integer
+		Declare T&26, Integer
+		Declare T&27, Integer
+		Declare T&28, Integer
+		Declare T&29, Integer
+		Declare T&30, Integer

@@ -1,0 +1,55 @@
+		START generalTest
+		Declare end_, Float
+		Declare jimlin, Float
+
+		Declare i, Integer
+
+		Declare ret, Integer
+
+		F_CMP_L end_,10.000000,T&1
+		F_CMP_G jimlin,0.000000,T&2
+		AND T&1,T&2,T&3
+		F_CMP_E jimlin,7.000000,T&4
+		NOT T&4,T&5
+		F_CMP_G end_,0.000000,T&6
+		AND T&5,T&6,T&7
+		OR T&3,T&7,T&8
+		I_CMP T&8,1
+		JNE lb&1
+		I_Store 999, ret
+		I_Store 7, i
+		I_CMP i,1
+		JLE lb&4
+lb&3:
+		I_Store 8, ret
+		DEC i
+		I_CMP i,1
+		JG lb&3
+
+lb&4:
+		I_Store 900, ret
+		J lb&2
+lb&1:
+		I_Store 11, ret
+		I_Store 7, i
+		I_CMP i,100
+		JGE lb&6
+lb&5:
+		I_Store 9, ret
+		INC i
+		I_CMP i,100
+		JL lb&5
+
+lb&6:
+		I_Store 18, ret
+lb&2:
+		HALT generalTest
+
+		Declare T&1, Integer
+		Declare T&2, Integer
+		Declare T&3, Integer
+		Declare T&4, Integer
+		Declare T&5, Integer
+		Declare T&6, Integer
+		Declare T&7, Integer
+		Declare T&8, Integer
