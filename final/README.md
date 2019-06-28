@@ -14,7 +14,7 @@ This project code base demonstrates how to build a Micro/Ex compiler.
 * Ubuntu 18.04 Bash
 * Yacc(bison (GNU Bison) 3.0.4)
 * Lex(flex version 2.5.4)
-* GNU Make
+* GNU Make(GNU Make 4.1)
 
 <a name="folder" />
 
@@ -26,15 +26,23 @@ This project code base demonstrates how to build a Micro/Ex compiler.
 ├── parser.y ( the yacc file )
 ├── scanner.l ( the lex file )
 ├── spec.ppt ( the final project specification )
-├── testcases
+├── testcases ( *.in is the input program, *.out is the output target language program )
 │   ├── assignment.in
+│   ├── assignment.out
 │   ├── declare.in
+│   ├── declare.out
 │   ├── expression.in
+│   ├── expression.out
 │   ├── for.in
+│   ├── for.out
 │   ├── if-for-nested.in
+│   ├── if-for-nested.out
 │   ├── if.in
+│   ├── if.out
 │   ├── nestedfor.in
-│   └── nestedif.in
+│   ├── nestedfor.out
+│   ├── nestedif.in
+│   └── nestedif.out
 ├── util.c
 └── util.h
 ```
@@ -42,10 +50,16 @@ This project code base demonstrates how to build a Micro/Ex compiler.
 <a name="howtorun" />
 
 # How to run
+* Run a program by yourself
 ```
 make
 ./micro-ex-compiler <input program path> <output path>
 make clean
+```
+* For lazy person, you can run `make run`, then it will generate `testcases/*.out` files for you
+```
+make
+make run
 ```
 
 <a name="learned" />
