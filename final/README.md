@@ -1,6 +1,9 @@
 # Compiler Final Project
 This project code base demonstrates how to build a Micro/Ex compiler.
 
+# Author
+b04705003 台大資工四 林子雋(Jim Lin)
+
 # Table of Content
 * [Environment](#Environment)
 * [Folder Structure](#folder)
